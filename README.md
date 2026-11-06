@@ -3,7 +3,7 @@
     <img src="images/hero.png" alt="hero" width="250" height="250">
   <h2 align="center" style="font-weight: 600">萌音 MoeKoe Music</h2>
   <p align="center">
-    一个以 Android 客户端为主线的酷狗第三方音乐播放器
+    MoeKoeMusic 的 Android 端适配
   </p>
   <p align="center">
     <a href="https://github.com/DouDouawa/MoeKoeMusic-"><strong>🌎 本仓库</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
@@ -13,11 +13,18 @@
 
 ## 📌 这是什么
 
-这是 [MoeKoeMusic](https://github.com/MoeKoeMusic/MoeKoeMusic/) 的一个个人分支版本。
+这是 [MoeKoeMusic](https://github.com/MoeKoeMusic/MoeKoeMusic/) 的一个个人分支，**只做 Android 端的前端适配**。
 
-原项目是一个用 Vue 3 写的酷狗第三方客户端，覆盖网页端、Electron 桌面端和 Docker 部署。**本分支保留了完整的前端代码，并在此基础上补齐 Android 客户端的体验**——把播放、缓存等能力下沉到原生层，同时修掉了大量移动端布局与交互问题。
+原项目是一个用 Vue 3 写的酷狗第三方客户端，覆盖网页端、Electron 桌面端和 Docker 部署。本分支在它的前端基础上，把界面装进 Capacitor 壳、补齐 Android 端的播放与缓存能力，并修掉移动端布局与交互问题。
 
-本仓库**只包含前端**。后端 API 是一个独立的服务（`kugoumusicapi`），不在本仓库里，运行时会通过地址访问，详见[后端说明](#-后端说明)。
+需要强调的是范围：
+
+- **只改前端**。本仓库没有任何服务端代码，也不修改、不替代原项目的后端。
+- **后端仍然是原作者的**。API 行为、接口约定完全沿用原项目，本分支不做任何改动。
+- 桌面端（Electron）、网页端的能力保持原样，本分支的改动集中在 Android 相关部分。
+- 上游的 Docker 部署文件已在本分支移除，因为与 Android 端无关。若需要 Docker 部署，请使用[原项目](https://github.com/MoeKoeMusic/MoeKoeMusic/)。
+
+具体怎么填后端地址，见[后端说明](#-后端说明)。
 
 ## ✨ 相对原项目做了什么
 
@@ -113,13 +120,16 @@ PIN=你的锁屏密码 bash scripts/install-apk.sh
 
 ## 🔌 后端说明
 
-本仓库是纯前端，**不含任何服务端代码**。所有歌曲、歌单、登录等数据都来自外部 API：
+本仓库是纯前端，**不含任何服务端代码，也不修改后端**。后端沿用原作者的实现，接口约定与本分支无关：
 
-- 默认地址在 [`src/utils/apiBaseUrl.js`](src/utils/apiBaseUrl.js) 中定义
+- 后端来源：[MakcRe/KuGouMusicApi](https://github.com/MakcRe/KuGouMusicApi)，即原项目所依赖的同一套 API
+- 默认地址沿用上游写法 `http://127.0.0.1:6521`，见 [`src/utils/apiBaseUrl.js`](src/utils/apiBaseUrl.js)
 - 构建时可用环境变量 `VITE_APP_API_URL` 覆盖
-- 应用内「设置 → API 地址」也可以随时改成自建服务
+- 应用内「设置 → API 地址」也可以随时改成你自己的服务地址
 
-本地开发时，`pnpm dev` 会用 `kugoumusicapi` 这个 npm 包在 `6521` 端口拉起一个 API 服务（见 `package.json` 的 `api` 脚本）。它只是一个依赖，源码不在这里。
+本地开发时，`pnpm dev` 会用 `kugoumusicapi` 这个 npm 包在 `6521` 端口拉起一个 API 服务（见 `package.json` 的 `api` 脚本）。它只是原项目发布的一个依赖，源码不在本仓库，本分支也没有对它做任何改动。
+
+换句话说：**如果你需要后端，请使用原项目的方式部署**，本分支只负责 Android 端这一层。
 
 ## 📂 目录结构
 

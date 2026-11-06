@@ -1,7 +1,7 @@
-// 默认后端：构建时可用 VITE_APP_API_URL 覆盖；这里给出可用的线上地址，
-// 免得打完包还指向本机 127.0.0.1 导致装到手机上什么都请求不到。
+// 默认后端沿用上游写法：本机自建服务。构建时可用 VITE_APP_API_URL 覆盖，
+// 也可在应用内「设置 → API 地址」修改。
 export const DEFAULT_API_BASE_URL =
-    import.meta.env.VITE_APP_API_URL || 'http://play.mcd7.cn:34370';
+    import.meta.env.VITE_APP_API_URL || 'http://127.0.0.1:6521';
 
 export function normalizeApiBaseUrl(input) {
     const result = validateApiBaseUrl(input);

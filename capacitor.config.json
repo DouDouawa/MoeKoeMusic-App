@@ -4,7 +4,7 @@
   "webDir": "dist",
   "server": {
     "androidScheme": "http",
-    "hostname": "play.mcd7.cn",
+    "hostname": "localhost",
     "cleartext": true
   },
   "android": {
