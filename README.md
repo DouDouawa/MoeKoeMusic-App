@@ -1,312 +1,167 @@
 <br />
 <p align="center">
-    <img src="https://github.com/MoeKoeMusic/MoeKoeMusic/raw/main/images/hero.png" alt="hero" width="250" height="250">
-  <h2 align="center" style="font-weight: 600">MoeKoe Music</h2>
+    <img src="images/hero.png" alt="hero" width="250" height="250">
+  <h2 align="center" style="font-weight: 600">萌音 MoeKoe Music</h2>
   <p align="center">
-    <a href="https://github.com/MoeKoeMusic/MoeKoeMusic/releases/latest"><img src="https://img.shields.io/github/v/release/MoeKoeMusic/MoeKoeMusic?style=flat-square" /></a>
-    <a href="https://github.com/MoeKoeMusic/MoeKoeMusic/stargazers"><img src="https://img.shields.io/github/stars/MoeKoeMusic/MoeKoeMusic?style=flat-square" /></a>
-    <a href="https://github.com/MoeKoeMusic/MoeKoeMusic/releases"><img src="https://img.shields.io/github/downloads/MoeKoeMusic/MoeKoeMusic/total?style=flat-square" /></a>
-    <a href="https://github.com/MoeKoeMusic/MoeKoeMusic/blob/main/LICENSE"><img src="https://img.shields.io/github/license/MoeKoeMusic/MoeKoeMusic?style=flat-square" /></a>
-    <a href="https://github.com/iAJue"><img src="https://img.shields.io/badge/%F0%9F%8E%89_Create_by_iAJue-with_Love_%E2%9D%A4-pink?style=flat-square" /></a>
+    一个以 Android 客户端为主线的酷狗第三方音乐播放器
   </p>
   <p align="center">
-    一款开源简洁高颜值的酷狗第三方客户端
-    <br />
-    <a href="https://github.com/MoeKoeMusic/MoeKoeMusic/" target="blank"><strong>🌎 GitHub仓库</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-    <a href="https://github.com/MoeKoeMusic/MoeKoeMusic/releases" target="blank"><strong>📦️ 下载安装包</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-    <a href="https://MoeJue.cn" target="blank"><strong>💬 访问博客</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-    <a href="https://Music.MoeKoe.cn" target="blank"><strong>🏠 项目主页</strong></a>
-  </p>
-  <p align="center">
-    <a href="https://github.com/MoeKoeMusic/MoeKoeMusic/README.md" target="blank"><strong>🇨🇳 简体中文</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-    <a href="https://github.com/MoeKoeMusic/MoeKoeMusic/blob/main/docs/README_tw.md" target="blank"><strong>🇨🇳 繁体中文</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-    <a href="https://github.com/MoeKoeMusic/MoeKoeMusic/blob/main/docs/README_ja.md" target="blank"><strong>🇯🇵 日本語</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-    <a href="https://github.com/MoeKoeMusic/MoeKoeMusic/blob/main/docs/README_en.md" target="blank"><strong>🇺🇸 English</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-    <a href="https://github.com/MoeKoeMusic/MoeKoeMusic/blob/main/docs/README_ko.md" target="blank"><strong>🇰🇷 한국어</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
-    <a href="https://github.com/MoeKoeMusic/MoeKoeMusic/blob/main/docs/README_ru.md" target="blank"><strong>🇷🇺 Русский</strong></a>
-    <br />
-    <br />
+    <a href="https://github.com/DouDouawa/MoeKoeMusic-"><strong>🌎 本仓库</strong></a>&nbsp;&nbsp;|&nbsp;&nbsp;
+    <a href="https://github.com/MoeKoeMusic/MoeKoeMusic/"><strong>⬆️ 原项目</strong></a>
   </p>
 </p>
 
-![images](https://github.com/MoeKoeMusic/MoeKoeMusic/raw/main/images/1.png)
+## 📌 这是什么
 
-## ❤️ 前言
+这是 [MoeKoeMusic](https://github.com/MoeKoeMusic/MoeKoeMusic/) 的一个个人分支版本。
 
-早在10年前后的样子,那会在用网页版QQ的时候我就已经开始使用酷狗音乐了(也是十来年的老粉了),所以这些年收藏的歌曲全部都在上面.后来我也尝试开始使用网易云或QQ音乐,也尝试把酷狗的歌单导入进去,但是效果都不尽人意.我听的大多是日漫OP,好多歌曲都没办法找到.
+原项目是一个用 Vue 3 写的酷狗第三方客户端，覆盖网页端、Electron 桌面端和 Docker 部署。**本分支保留了完整的前端代码，并在此基础上补齐 Android 客户端的体验**——把播放、缓存等能力下沉到原生层，同时修掉了大量移动端布局与交互问题。
 
-兜兜转转最后还是回到酷狗,但是在Mac端的酷狗,时常可能会出现不能播放的情况,虽说界面没什么功能,但也挺好的.在网友的安利下,我现在一直是在酷狗的[概念版](https://t1.kugou.com/d2tBza3CSV2)上听歌,并且是市面上为数不多能免费听VIP歌曲的音乐播放软件了,力推.
+本仓库**只包含前端**。后端 API 是一个独立的服务（`kugoumusicapi`），不在本仓库里，运行时会通过地址访问，详见[后端说明](#-后端说明)。
 
-我在我的个人介绍页面说我特别喜欢听歌,尤其是日漫OP.怎么证明呢?(之前我网页版歌单也年久失修了)那就自己开发一个音乐播放器.
+## ✨ 相对原项目做了什么
 
+### Android 客户端
 
-## ✨ 特性
+原项目基于 Electron 做桌面端，本分支新增了 Capacitor 工程，把同一套前端装进 Android 应用，并补上了网页端做不到的部分：
 
-- ✅ 使用 Vue.js 全家桶开发
-- 🔴 酷狗账号登录（扫码/手机/账号登录）
-- 📃 支持歌词显示
-- 📻 每日推荐歌曲
-- 🔕 无任何社交功能
-- 🔗 官方服务器直连
-- ✔️ 每日自动领取VIP，登录就是VIP
-- 🎨 主题色切换
-- 👋 启动问候语
-- ⚙️ 多平台支持
-- 🧩 超级插件系统
-- 🧭 布局个性化设置
-- 🥚 隐藏功能与彩蛋系统
-- 🚀 新手引导系统
-- ✨ 更多特性由你来探索
+- **原生播放服务**：`PlaybackService` + `QueuePlayer` 接管播放队列，切到后台或息屏后不断播
+- **原生音频缓存**：`AudioCache` / `CacheDb` 支持离线缓存与断点续传，不再受 WebView 的存储与内存限制
+- **音源解析下沉**：`SourceResolver` 在 Java 层完成多音源解析与切换
+- **PCM 录制**：`PcmRecorder` 支持听歌识曲所需的音频采集
+- 通过 `MoePlaybackPlugin` 把上述能力暴露给 JS 层
 
-## 📢 Todo List
-- [x] 📺 支持 MV 播放
-- [x] 🌚 Light/Dark Mode 自动切换
-- [x] 👆 支持 Touch Bar
-- [x] 🖥️ 支持 PWA
-- [x] ⌨️ 全局快捷键
-- [x] 🤟 多语言支持
-- [x] 📻 桌面歌词
-- [x] ⚙️ 系统架构优化
-- [x] 🎶 歌曲、歌单/收藏、取消
+### 移动端适配
 
-[查看更新日志](http://music.moekoe.cn/changelog.html)
+- 新增抽屉导航、手势返回、下拉刷新、页签滑动等交互（`useNavigationDrawer`、`drawerGesture`、`usePullToRefresh`、`useTabSwipe`）
+- 统一移动端断点到 `768px`，修掉原先 `767px` / `768px` 两套断点并存导致的布局错位
+- 修正触屏下「只有 hover 才可见」的入口：收藏区关闭按钮、歌曲播放图标在手机上根本点不到
+- 顶部导航右上角的三点图标改为用户头像入口，未登录时显示默认头像
+- 音乐库、本地音乐、设置等页面的栅格与操作区按手机宽度重排
+- 修复用户卡片操作按钮被 `content-box` 撑成 50px 方块的问题
 
-## 📦️ 安装
+### 播放器
 
-### 1. 客户端安装
+- 新增 `NativeAudioController` 与 `PlaybackIntent`，统一原生与网页两条播放链路
+- 修复歌名过长时不滚动、以及短歌名不应滚动的问题
+- 修复在设置中切换音质后，音质徽章不即时刷新（需切歌才更新）的问题
 
-访问本项目的 [Releases](https://github.com/MoeKoeMusic/MoeKoeMusic/releases) 页面下载安装包。
+## 🛠 技术栈
 
-### 2. WEB端安装（docker）
+| 层次 | 技术 |
+|---|---|
+| 前端 | Vue 3、Vue Router、Pinia、Vite |
+| 桌面端 | Electron |
+| Android | Capacitor 8、Java、Gradle |
+| 样式 | SCSS |
+| 国际化 | vue-i18n（简中 / 繁中 / 英 / 日 / 韩 / 俄） |
 
-* 注意：部署后请开放服务器对应端口才可使用，或者使用反向代理实现域名访问。
+## 🚀 开发
 
-    1. 方式一：快速启动（推荐）
-
-    ```
-    git clone --depth=1 https://github.com/MoeKoeMusic/MoeKoeMusic.git
-    cd MoeKoeMusic
-    docker compose up -d &
-    ```
-
-    2. ~~方式二：使用docker-compose一键安装 （镜像暂未上传官方）~~
-    
-    ```
-    docker run -d --name MoeKoeMusic -p 8080:8080 -e PORT=6521 -e platform=lite iajue/moekoe-music:latest
-    ```
-
-    3. 方式三：宝塔容器编排
-
-    * 远程镜像，版本可能会落后于官方
-    
-    ```
-    version: '3.3'
-    
-    services:
-      moekoe-music:
-        # 镜像地址
-        image: registry.cn-wulanchabu.aliyuncs.com/youngxj/moekoe-music:latest
-        container_name: moekoe-music # 容器名
-        restart: unless-stopped # 自动重启
-        build:
-          context: .
-          dockerfile: Dockerfile
-        environment:
-          - PORT=6521
-          - platform=lite
-        ports: # 端口映射
-          - "8080:8080"  # 前端服务
-          - "6521:6521"  # 接口服务
-    
-    ```
-    
-    复制内容上面的内容，粘贴到宝塔面板的容器编排里面，编排名称为MoeKoeMusic，点击部署即可。
-
-### 3. 一键部署
-[![使用 EdgeOne Pages 部署](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://edgeone.ai/pages/new?template=https://github.com/MoeKoeMusic/MoeKoeMusic&install-command=npm%20install&output-directory=dist&root-directory=.%2F&build-command=npm%20run%20build&env=VITE_APP_API_URL)
-
-需在环境变量(VITE_APP_API_URL)中填写自己的API地址
-
-## ⚙️ 开发
-
-1. 克隆本仓库
+需要 Node.js >= 20。
 
 ```sh
-git clone --depth=1 https://github.com/MoeKoeMusic/MoeKoeMusic.git
-```
-
-2. 进入目录并安装依赖
-
-```sh
-cd MoeKoeMusic
 pnpm install --frozen-lockfile
 ```
-3. 启动开发者模式
-  - 在浏览器里开发
-  ```sh
-  pnpm run dev
-  ```
-  - 在客户端开发模式下开发
-  ```sh
-  pnpm run dev:client
-  ```
 
-4. 构建前端
-为你的目标平台选择一条命令来构建前端
+启动开发服务器（会同时拉起本地 API 与 Vite）：
+
 ```sh
-pnpm run build # 为网页端构建前端
-pnpm run build:client # 为客户端构建前端
-pnpm run build:docker # 为 Docker 镜像构建前端
-```
-5. 编译项目
-  - Windows: 
-```sh
-pnpm run electron:build:win # [默认 NSIS 安装包]
-```
-  - Linux: 
-```sh
-pnpm run electron:build:linux # [默认 AppImage 格式]
-```
-  - macOS: 
-```sh
-pnpm run electron:build:macos # [默认 macOS 双架构]
+pnpm dev
 ```
 
+只跑前端、连已有后端：
 
-更多命令请查看 `package.json` 文件 `scripts` 
+```sh
+pnpm serve
+```
 
-## 👷‍♂️ 编译客户端
+构建前端：
 
-如果在 Release 页面没有找到适合你的设备的安装包的话，你可以根据下面的步骤来打包自己的客户端。
+```sh
+pnpm build          # 网页端
+pnpm build:client   # Electron 客户端
+pnpm build:docker   # Docker 部署
+```
 
-1. 安装 [Node.js](https://nodejs.org/en/)，并确保 `Node.js` 版本 >= 20.0.0。
+运行单元测试：
 
-2. 使用 `git clone --depth=1 https://github.com/MoeKoeMusic/MoeKoeMusic.git` 克隆本仓库到本地。
+```sh
+pnpm test
+```
 
-3. 使用 `pnpm install --frozen-lockfile` 安装项目依赖。
+## 📱 构建 Android 客户端
 
-4. 使用 `pnpm run build:client` 为客户端构建前端
+前置条件：JDK 17 或 21（AGP 8.x 不接受 JDK 22+）、Android SDK。
 
-5. 选择下列的命令来打包适合的你的安装包，打包出来的文件在 `/dist_electron` 目录下。了解更多信息可访问 [electron-builder 文档](https://www.electron.build/cli)
+```sh
+bash scripts/build-android.sh
+```
 
+这个脚本做三件事，缺一步都会得到「能装但内容过期」的包：
 
-#### 1. 打包 macOS 平台
-   - 通用的 macOS 包（Intel 和 Apple Silicon 双架构）：
-   ```
-   pnpm run electron:build -- --mac --universal
-   ```
-   - 仅 Intel 架构：
-   ```
-   pnpm run electron:build -- --mac --x64
-   ```
-   - 仅 Apple Silicon 架构：
-   ```
-   pnpm run electron:build -- --mac --arm64
-   ```
+1. `vite build` 生成 `dist`
+2. `cap sync` 把 `dist` 同步进 `android/app/src/main/assets/public`
+3. `gradlew assembleDebug` 编译 APK
 
+产物在 `android/app/build/outputs/apk/debug/app-debug.apk`。
 
-#### 2. 打包 Windows 平台
+安装到设备（华为设备会自动处理安装弹窗）：
 
-   - 默认 NSIS 安装包（适合大多数 Windows 用户）：
-   ```
-   pnpm run electron:build -- --win
-   ```
-   - 为 Windows 创建 EXE 文件和 Squirrel 安装包：
-   ```
-   pnpm run electron:build -- --win --ia32 --x64 --arm64 --target squirrel
-   ```
-       - --ia32 为 32 位 Windows 架构。
-       - --x64 为 64 位 Windows 架构。
-       - --arm64 为 ARM Windows 架构（Surface 等设备）。
+```sh
+PIN=你的锁屏密码 bash scripts/install-apk.sh
+```
 
-   - 为 Windows 生成便携式的 EXE 文件（免安装）：
-   ```
-   pnpm run electron:build -- --win --portable
-   ```
-#### 3. 打包 Linux 平台
-   - 默认 AppImage 格式（适用于大多数 Linux 发行版）：
+## 🔌 后端说明
 
-   ```
-   pnpm run electron:build -- --linux
-   ```
-   - snap（适用于 Ubuntu 和支持 snap 的发行版）：
-   ```
-   pnpm run electron:build -- --linux --target snap
-   ```
-   - 	deb（适用于 Debian/Ubuntu 系列）：
-   ```
-   pnpm run electron:build -- --linux --target deb
-   ```
-   - rpm（适用于 Red Hat/Fedora 系列）：
-   ```
-   pnpm run electron:build -- --linux --target rpm
-   ```
-   - ARM64架构(ARM v8+): 
-   ```
-   pnpm run electron:build:linux-arm64
-   ```
+本仓库是纯前端，**不含任何服务端代码**。所有歌曲、歌单、登录等数据都来自外部 API：
 
-#### 4. 打包所有平台
+- 默认地址在 [`src/utils/apiBaseUrl.js`](src/utils/apiBaseUrl.js) 中定义
+- 构建时可用环境变量 `VITE_APP_API_URL` 覆盖
+- 应用内「设置 → API 地址」也可以随时改成自建服务
 
-  如果需要同时生成 Windows、macOS 和 Linux 的安装包，可以使用以下命令：
-  ```
-  pnpm run electron:build -- -mwl
-  ```
+本地开发时，`pnpm dev` 会用 `kugoumusicapi` 这个 npm 包在 `6521` 端口拉起一个 API 服务（见 `package.json` 的 `api` 脚本）。它只是一个依赖，源码不在这里。
 
-#### 5. 自定义编译设置
+## 📂 目录结构
 
-您可以根据需要添加其他选项来进一步自定义打包，例如指定 x64 和 arm64 架构，或选择不同的目标格式。
+```
+src/
+├── components/          组件，含 player/ 播放核心与 discover/、search/ 等业务分组
+├── composables/         移动端交互（抽屉、手势、下拉刷新、页签滑动）
+├── config/              设置项、引导、启动页配置
+├── language/            多语言文案
+├── layouts/             页面布局
+├── router/              路由
+├── stores/              Pinia 状态
+├── utils/               API 地址、音频缓存、原生播放桥接等
+└── views/               页面
+android/                 Capacitor Android 工程（Java 原生层）
+public/                  静态资源
+scripts/                 Android 构建与安装脚本
+tests/                   单元测试
+```
 
-## ⭐ 支持项目
+## 🙏 致谢与原项目
 
-如果您觉得这个项目对您有帮助，欢迎给我们一个 Star！您的支持是我们持续改进的动力。
+本项目的绝大部分工作来自原项目，感谢原作者 [iAJue](https://github.com/iAJue) 及所有贡献者：
 
-[![GitHub stars](https://img.shields.io/github/stars/MoeKoeMusic/MoeKoeMusic.svg?style=social&label=Star)](https://github.com/MoeKoeMusic/MoeKoeMusic)
+- **原仓库**：https://github.com/MoeKoeMusic/MoeKoeMusic/
+- **原项目主页**：https://Music.MoeKoe.cn
+- **API 来源**：[MakcRe/KuGouMusicApi](https://github.com/MakcRe/KuGouMusicApi)
 
-## ✅ 反馈
+原项目的设计灵感来自 [Apple Music](https://music.apple.com)、[YouTube Music](https://music.youtube.com)、[YesPlayMusic](https://github.com/qier222/YesPlayMusic)。
 
-如有任何问题或建议，欢迎提交 issue 或 pull request。
+如果你只是想用这个播放器，建议优先使用原项目的正式发布版本；本分支主要面向 Android 端的定制需求。
 
 ## ⚠️ 免责声明
-0. 本程序是酷狗第三方客户端，并非酷狗官方，需要更完善的功能请下载官方客户端体验.
-1. 本项目仅供学习使用，请尊重版权，请勿利用此项目从事商业行为及非法用途！
-2. 使用本项目的过程中可能会产生版权数据。对于这些版权数据，本项目不拥有它们的所有权。为了避免侵权，使用者务必在 24 小时内清除使用本项目的过程中所产生的版权数据。
-3. 由于使用本项目产生的包括由于本协议或由于使用或无法使用本项目而引起的任何性质的任何直接、间接、特殊、偶然或结果性损害（包括但不限于因商誉损失、停工、计算机故障或故障引起的损害赔偿，或任何及所有其他商业损害或损失）由使用者负责。        
-1. 禁止在违反当地法律法规的情况下使用本项目。对于使用者在明知或不知当地法律法规不允许的情况下使用本项目所造成的任何违法违规行为由使用者承担，本项目不承担由此造成的任何直接、间接、特殊、偶然或结果性责任。    
-2. 音乐平台不易，请尊重版权，支持正版。
-3. 本项目仅用于对技术可行性的探索及研究，不接受任何商业（包括但不限于广告等）合作及捐赠。
-4. 如果官方音乐平台觉得本项目不妥，可联系本项目更改或移除。
-            
+
+1. 本程序是酷狗第三方客户端，并非酷狗官方。需要更完善的功能请使用官方客户端。
+2. 本项目仅供学习研究使用，请尊重版权，禁止用于商业及非法用途。
+3. 使用过程中可能产生版权数据，本项目不拥有其所有权。为避免侵权，请在 24 小时内清除使用过程中产生的版权数据。
+4. 音乐平台不易，请支持正版。
+5. 因使用本项目产生的任何直接或间接损害，由使用者自行承担。
+6. 若官方音乐平台认为本项目不妥，可联系更改或移除。
 
 ## 📜 开源许可
 
-本项目仅供个人学习研究使用，禁止用于商业及非法用途。
-
-基于 [GNU General Public License v2.0 (GPL-2.0)](https://github.com/MoeKoeMusic/MoeKoeMusic/blob/main/LICENSE) 许可进行开源。
-
-## 👍 灵感来源
-
-API 源代码来自 [MakcRe/KuGouMusicApi](https://github.com/MakcRe/KuGouMusicApi) 
-
-- [Apple Music](https://music.apple.com)
-- [YouTube Music](https://music.youtube.com)
-- [YesPlayMusic](https://github.com/qier222/YesPlayMusic)
-- [酷狗音乐](https://kugou.com/)
-
-## 🖼️ 截图
-
-![image](https://github.com/MoeKoeMusic/MoeKoeMusic/raw/main/images/2.png)
-![image](https://github.com/MoeKoeMusic/MoeKoeMusic/raw/main/images/3.png)
-![image](https://github.com/MoeKoeMusic/MoeKoeMusic/raw/main/images/4.png)
-![image](https://github.com/MoeKoeMusic/MoeKoeMusic/raw/main/images/5.png)
-![image](https://github.com/MoeKoeMusic/MoeKoeMusic/raw/main/images/6.png)
-![image](https://github.com/MoeKoeMusic/MoeKoeMusic/raw/main/images/7.png)
-![image](https://github.com/MoeKoeMusic/MoeKoeMusic/raw/main/images/8.png)
-![image](https://github.com/MoeKoeMusic/MoeKoeMusic/raw/main/images/9.png)
-![image](https://github.com/MoeKoeMusic/MoeKoeMusic/raw/main/images/10.png)
-![image](https://github.com/MoeKoeMusic/MoeKoeMusic/raw/main/images/11.png)
-
-
-## 🗓️ Star History
-
-[![Star History Chart](https://api.star-history.com/chart?repos=MoeKoeMusic/MoeKoeMusic&type=date&legend=top-left&sealed_token=unIw8k8CbengL1CW5XVoW-psSsTQHjp7X6Hchrr9WiEh4baeFZXunI95J9V8nnY8XTWrT8UuvRBXScevzXLRlhTID0-_V200iw9TFChclu1-28maCH3NutInvRl6nQ1jDMXpInpefFixeHYDr8BCn9fYqiNtZAoK30Vi46s7QPQQU80mJstgjgeqWjXf)](https://www.star-history.com/#MoeKoeMusic/MoeKoeMusic&Date)
+基于 [GNU General Public License v2.0 (GPL-2.0)](LICENSE) 开源，与原项目保持一致。
