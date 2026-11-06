@@ -114,7 +114,7 @@ const showContextMenu = (event, song) => {
     if (contextMenuRef.value) {
         song.cover = song.Image?.replace("{size}", 480) || './assets/images/ico.png',
             song.timeLength = song.Duration;
-        song.OriSongName = song.FileName;
+        song.OriSongName = song.FileName || song.OriSongName || song.SongName;
         contextMenuRef.value.openContextMenu(event, song);
     }
 };
@@ -525,5 +525,70 @@ const handleProgramClick = (program) => {
     font-weight: bold;
     margin-bottom: 30px;
     color: var(--primary-color);
+}
+/* 手机：六个搜索类型标签比 320px 还宽，改成可横向滑动而不是压缩或换行。 */
+@media (max-width: 768px) {
+    .search-results {
+        padding: 12px;
+    }
+
+    .section-title {
+        font-size: 20px;
+        margin-bottom: 12px;
+    }
+
+    .search-tabs {
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: 14px;
+
+        &::-webkit-scrollbar { display: none; }
+    }
+
+    .tab-button {
+        flex: 0 0 auto;
+        padding: 0 14px;
+        min-height: 44px;
+        font-size: 15px;
+        white-space: nowrap;
+    }
+
+    /* 分页收敛：上一页/下一页保留，中间页码横滑，不整体溢出 */
+    .pagination {
+        gap: 6px;
+        flex-wrap: nowrap;
+        margin: 16px 0;
+    }
+
+    .page-numbers {
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+        min-width: 0;
+
+        &::-webkit-scrollbar { display: none; }
+    }
+
+    .page-number {
+        flex: 0 0 auto;
+        min-width: 40px;
+        min-height: 40px;
+        padding: 8px 10px;
+    }
+
+    .pagination > button {
+        flex: 0 0 auto;
+        min-height: 40px;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 420px) {
+    .pagination > button {
+        font-size: 13px;
+        padding: 8px 10px;
+    }
 }
 </style>

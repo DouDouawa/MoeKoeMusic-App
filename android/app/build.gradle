@@ -1,0 +1,67 @@
+apply plugin: 'com.android.application'
+
+// 版本号跟 package.json 走，避免 APK 里的 1.0 和界面上的 1.7.1 对不上。
+// versionCode 用 major*10000 + minor*100 + patch，保证单调递增且不会溢出。
+def packageInfo = new groovy.json.JsonSlurper().parseText(file('../../package.json').text)
+def (majorVer, minorVer, patchVer) = packageInfo.version.tokenize('.').collect { it.replaceAll(/\D/, '') as int }
+def packageVersionCode = majorVer * 10000 + minorVer * 100 + patchVer
+
+android {
+    namespace = "cn.MoeKoe.Music"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "cn.MoeKoe.Music"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode packageVersionCode
+        versionName packageInfo.version
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    // Background playback owns the player and the media session outside the WebView.
+    implementation "androidx.media3:media3-exoplayer:$media3Version"
+    implementation "androidx.media3:media3-session:$media3Version"
+    // Storage Access Framework traversal for local audio folders.
+    implementation "androidx.documentfile:documentfile:$documentFileVersion"
+    testImplementation "junit:junit:$junitVersion"
+    // Real org.json implementation for JVM unit tests (android.jar only has stubs).
+    testImplementation "org.json:json:$jsonTestVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

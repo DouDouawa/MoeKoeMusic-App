@@ -23,7 +23,14 @@
         <div v-if="showPrompt" class="modal-overlay">
             <div class="modal">
                 <h3 :class="modalMessageClass">{{ promptMessage }}</h3>
-                <input type="text" v-model="promptInput" class="prompt-input" />
+                <input
+                    type="text"
+                    v-model="promptInput"
+                    class="prompt-input"
+                    enterkeyhint="done"
+                    autocomplete="off"
+                    @keyup.enter="submitPrompt"
+                />
                 <div class="buttons">
                     <button @click="submitPrompt" class="btn" :class="modalButtonClass">{{ i18n.global.t('que-ding') }}</button>
                     <button @click="closePrompt" class="btn" :class="modalButtonClass">{{ i18n.global.t('qu-xiao') }}</button>
@@ -42,6 +49,7 @@
 <script setup>
 import { ref } from 'vue';
 import i18n from '@/utils/i18n';
+import { useDismissableOverlay } from '@/composables/useDismissableOverlay';
 // 该组件代码来自萌音商城(MoeKoe.cn) © 阿珏酱
 // window.$modal.alert('这是一个 Alert'); // 直接调用 window.$modal
 // const result = await window.$modal.confirm('这是一个 Confirm');
@@ -138,7 +146,13 @@ const submitPrompt = () => {
 
 const closePrompt = () => {
     showPrompt.value = false;
+    promptResolve?.('');
 };
+
+// 返回键/Escape 只关闭最上层模态；确认框等价于取消，避免调用方 await 永远悬空。
+useDismissableOverlay(showPrompt, closePrompt);
+useDismissableOverlay(showConfirm, () => confirmAction(false));
+useDismissableOverlay(showAlert, confirmAlert);
 
 // Loading 方法
 const showCustomLoading = () => {
@@ -171,15 +185,26 @@ defineExpose({
     justify-content: center;
     align-items: center;
     z-index: 9999999;
+    box-sizing: border-box;
+    padding: 16px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .modal {
     background-color: white;
+    color: var(--text-color);
     padding: 30px;
     border-radius: 10px;
     text-align: center;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    box-sizing: border-box;
     width: 400px;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
 
     h3 {
         overflow-wrap: anywhere;
@@ -201,11 +226,19 @@ defineExpose({
 }
 
 .prompt-input {
-    width: 379px;
+    width: 100%;
+    box-sizing: border-box;
     padding: 10px;
     margin-top: 15px;
     border-radius: 5px;
     border: 1px solid var(--primary-color);
+    font-size: 16px;
+    outline: none;
+    transition: box-shadow 0.2s ease;
+
+    &:focus {
+        box-shadow: 0 0 0 2px rgba(255, 133, 162, 0.35);
+    }
 }
 
 .btn {
@@ -268,6 +301,69 @@ defineExpose({
 
     100% {
         transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 768px) {
+    .modal-overlay {
+        padding: calc(12px + var(--app-safe-top, 0px)) 12px calc(12px + var(--app-safe-bottom, 0px));
+        align-items: center;
+    }
+
+    .modal {
+        width: 100%;
+        max-width: 420px;
+        padding: 20px 18px;
+        border-radius: 12px;
+        max-height: calc(100dvh - 24px - var(--app-safe-top, 0px) - var(--app-safe-bottom, 0px));
+
+        h3 {
+            font-size: 16px;
+            line-height: 1.5;
+
+            &.small-message {
+                font-size: 13px;
+            }
+        }
+    }
+
+    .prompt-input {
+        min-height: 44px;
+        padding: 12px;
+        margin-top: 12px;
+    }
+
+    .buttons {
+        gap: 10px;
+        margin-top: 14px;
+    }
+
+    .btn {
+        flex: 1;
+        min-height: 44px;
+        font-size: 16px;
+        padding: 10px 12px;
+        margin-top: 8px;
+        border-radius: 22px;
+
+        &.small-button {
+            padding: 8px 12px;
+            font-size: 14px;
+        }
+    }
+}
+
+@media (max-width: 400px) {
+    .modal {
+        padding: 16px 14px;
+    }
+
+    .modal-overlay {
+        padding: 10px;
+    }
+
+    .btn {
+        font-size: 15px;
     }
 }
 </style>

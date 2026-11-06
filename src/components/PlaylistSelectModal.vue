@@ -1,12 +1,13 @@
 <template>
     <Teleport to="body">
         <transition name="fade">
-            <div v-if="isOpen" class="modal">
-                <div class="modal-content">
+            <div v-if="isOpen" class="modal" @click.self="isOpen = false">
+                <div class="modal-content" role="dialog" aria-modal="true" :aria-label="t('shou-cang-dao')">
                     <h3>{{ t('shou-cang-dao') }}</h3>
                     <ul class="playlist-select-list" v-if="playlists.length > 0">
-                        <li v-for="playlist in playlists" :key="playlist.list_id"
-                            @click="addToPlaylist(playlist.listid, currentSong); isOpen = false">
+                        <li v-for="playlist in playlists" :key="playlist.list_id" role="button" tabindex="0"
+                            @click="addToPlaylist(playlist.listid, currentSong); isOpen = false"
+                            @keydown.enter.prevent="addToPlaylist(playlist.listid, currentSong); isOpen = false">
                             {{ playlist.name }}
                         </li>
                     </ul>
@@ -23,6 +24,7 @@ import { ref } from 'vue';
 import { get } from '../utils/request';
 import { useI18n } from 'vue-i18n';
 import { MoeAuthStore } from '../stores/store';
+import { useDismissableOverlay } from '@/composables/useDismissableOverlay';
 
 const MoeAuth = MoeAuthStore();
 const { t } = useI18n();
@@ -39,6 +41,7 @@ const props = defineProps({
 });
 const playlists = ref([]);
 const isOpen = ref(false);
+useDismissableOverlay(isOpen, () => { isOpen.value = false; });
 
 const validateUserAndSong = () => {
     if (!MoeAuth.isAuthenticated) {
@@ -122,6 +125,8 @@ defineExpose({
     left: 0;
     width: 100%;
     height: 100%;
+    padding: var(--app-safe-top, 0px) 12px calc(var(--app-safe-bottom, 0px) + 12px);
+    box-sizing: border-box;
     background-color: rgba(0, 0, 0, 0.5);
     display: flex;
     justify-content: center;
@@ -151,7 +156,26 @@ defineExpose({
     min-width: 300px;
     max-width: 90%;
     max-height: 90vh;
+    max-height: 90dvh;
     overflow-y: auto;
+    box-sizing: border-box;
+    overscroll-behavior: contain;
+}
+
+@media (max-width: 768px) {
+    .modal { align-items: flex-end; padding-left: 0; padding-right: 0; padding-bottom: var(--app-safe-bottom, 0px); }
+    .modal-content {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        max-height: calc(88dvh - var(--app-safe-top, 0px));
+        border-radius: 16px 16px 0 0;
+        padding: 18px 16px 16px;
+    }
+    .modal-content h3 { margin: 0 0 6px; }
+    .playlist-select-list { max-height: none; margin: 10px 0; }
+    .playlist-select-list li { min-height: 44px; display: flex; align-items: center; overflow-wrap: anywhere; }
+    .close-btn-modal { min-height: 44px; font-size: 15px; }
 }
 
 .playlist-select-list {
@@ -166,6 +190,9 @@ defineExpose({
         cursor: pointer;
         transition: background-color 0.2s;
         border-radius: 8px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
 
         &:hover {
             background-color: var(--secondary-color);

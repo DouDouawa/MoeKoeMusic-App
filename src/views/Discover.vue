@@ -173,4 +173,43 @@ const handleDiscoverTabClick = (tab) => {
         line-height: 36px;
     }
 }
+/* 320px 小屏：四个标签不能再挤成两行，改为可横向滑动的胶囊 */
+@media (max-width: 420px) {
+    .discover-page {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .discover-switch {
+        grid-template-columns: none;
+        grid-auto-flow: column;
+        grid-auto-columns: max-content;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+
+        &::-webkit-scrollbar { display: none; }
+
+        &::before { display: none; }
+    }
+
+    .switch-item {
+        min-height: 44px;
+        padding: 0 14px;
+        white-space: nowrap;
+
+        &.active {
+            background: var(--discover-switch-active-bg);
+            box-shadow: var(--discover-switch-active-shadow);
+        }
+    }
+
+    .discover-floating-arona {
+        /* 保持和桌面一致的 -89% 露出比例（插画悬在分类栏上沿），
+           只把尺寸调小；改位移量会让它整块埋进固定顶栏里。 */
+        width: 96px;
+        transform: translate(-50%, -89%);
+    }
+}
 </style>

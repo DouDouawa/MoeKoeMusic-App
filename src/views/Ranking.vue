@@ -16,4 +16,9 @@ defineProps({
 .ranking-page {
     padding: 20px;
 }
+@media (max-width: 768px) {
+    .ranking-page {
+        padding: 12px;
+    }
+}
 </style>

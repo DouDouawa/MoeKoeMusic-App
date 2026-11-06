@@ -4,9 +4,10 @@
 
 <head>
     <meta charset="UTF-8">
-    <link rel="manifest" href="/manifest.webmanifest">
-    <link rel="icon" href="/favicon.ico">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/mobile-icons/favicon-32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/mobile-icons/apple-touch-icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>MoeKoe 萌音</title>
     <meta name="theme-color" content="#FF91AF">
     <meta name="description" content="MoeKoe 萌音,一个高颜值的kugou第三方播放器">
@@ -20,8 +21,10 @@
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
     <script>
+        // 支持的界面语言，与 src/utils/i18n.js 的 messages 保持一致
+        const locales = ['en', 'ja', 'ko', 'ru', 'zh-CN', 'zh-TW'];
         const getBrowserLocale = () => {
-            const browserLang = navigator.language;
+            const browserLang = navigator.language || '';
             if (browserLang.startsWith('zh')) {
                 if (browserLang === 'zh-TW' || browserLang === 'zh-HK') {
                     return 'zh-TW';
@@ -29,10 +32,17 @@
                 return 'zh-CN';
             }
             const lang = browserLang.split('-')[0];
-            return Object.keys(messages).includes(lang) ? lang : 'ja';
+            return locales.includes(lang) ? lang : 'ja';
         };
-        const settings = JSON.parse(localStorage.getItem('settings'));
-        document.documentElement.lang = settings?.language || getBrowserLocale();
+        const getSavedLocale = () => {
+            try {
+                return JSON.parse(localStorage.getItem('settings'))?.language;
+            } catch (e) {
+                return undefined; // 本地设置已损坏，回退到浏览器语言
+            }
+        };
+        const savedLocale = getSavedLocale();
+        document.documentElement.lang = locales.includes(savedLocale) ? savedLocale : getBrowserLocale();
     </script>
 </body>
 

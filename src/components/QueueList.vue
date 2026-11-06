@@ -209,4 +209,57 @@ defineExpose({
     cursor: pointer;
     font-size: 14px;
 }
+
+// 手机端：300px 固定宽度 + right:20px 在 320px 屏上直接溢出，
+// 改成贴住播放器上沿的底部抽屉；标题列不再写死 250px，避免把按钮挤出屏幕。
+@media (max-width: 768px) {
+    .queue-popup {
+        left: 0;
+        right: 0;
+        bottom: calc(var(--app-player-height) + var(--app-safe-bottom));
+        width: auto;
+        max-height: 62dvh;
+        padding: 8px 12px 12px;
+        border-radius: 16px 16px 0 0;
+        overflow: hidden;
+        z-index: 97;
+        box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.22);
+    }
+
+    .queue-header {
+        margin-bottom: 6px;
+    }
+
+    .queue-list {
+        height: min(52dvh, 350px);
+    }
+
+    .queue-item {
+        min-height: 48px;
+    }
+
+    .queue-song-info {
+        flex: 1;
+        min-width: 0;
+        margin-right: 10px;
+    }
+
+    .queue-song-title {
+        width: auto;
+    }
+
+    .queue-actions {
+        flex: 0 0 auto;
+    }
+
+    .queue-play-btn,
+    .close-store {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 40px;
+        min-height: 40px;
+        margin-left: 0;
+    }
+}
 </style>

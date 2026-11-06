@@ -22,7 +22,7 @@
                         @keydown.up.prevent="highlightPrevSuggestion"
                         @keydown.enter.prevent="submitSearch(searchKeyword, true)" />
                     <button v-if="searchKeyword" type="button" class="query-clear" title="清空"
-                        @mousedown.prevent="clearKeyword">
+                        @pointerdown.prevent="clearKeyword">
                         <i class="fas fa-xmark"></i>
                     </button>
                     <button class="query-submit" type="submit">
@@ -41,7 +41,7 @@
                             <button v-for="(item, index) in suggestions" :key="`${item.keyword}-${index}`"
                                 :class="['suggest-item', { active: index === activeSuggestionIndex }]"
                                 @mouseenter="activeSuggestionIndex = index"
-                                @mousedown.prevent="applySuggestion(item.keyword)">
+                                @pointerdown.prevent="applySuggestion(item.keyword)">
                                 <span class="suggest-ico"><i class="fas fa-magnifying-glass"></i></span>
                                 <span class="suggest-word">{{ item.keyword }}</span>
                                 <i class="fas fa-arrow-right suggest-go"></i>
@@ -1314,6 +1314,42 @@ onUnmounted(() => {
     *::after {
         animation: none !important;
         transition: none !important;
+    }
+}
+/* 手机：搜索建议与热词需要 44px 命中区；长关键词不能把行撑出屏幕 */
+@media (max-width: 768px) {
+    .query-pill {
+        min-width: 0;
+    }
+
+    .query-pill input {
+        min-width: 0;
+        font-size: 16px;
+    }
+
+    .query-clear,
+    .query-submit {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .suggest-item,
+    .hot-chip,
+    .trend-item {
+        min-height: 44px;
+    }
+
+    .suggest-word,
+    .hot-chip span,
+    .trend-item .trend-keyword {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+    }
+
+    .suggest-item {
+        gap: 8px;
     }
 }
 </style>

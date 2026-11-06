@@ -316,6 +316,8 @@ useActivatedWatch(() => route.query.songPage, async (songPage) => {
 .placeholder-card {
     min-width: 260px;
     padding: 40px 48px;
+    box-sizing: border-box;
+    max-width: 100%;
     text-align: center;
     background: var(--discover-placeholder-bg);
     border-radius: 18px;
@@ -343,6 +345,19 @@ useActivatedWatch(() => route.query.songPage, async (songPage) => {
     .page-number {
         min-width: 36px;
         padding: 6px 10px;
+    }
+}
+/* 320px：占位卡留白过大且 min-width 会顶破视口 */
+@media (max-width: 768px) {
+    .discover-placeholder {
+        padding-top: 40px;
+    }
+
+    .placeholder-card {
+        min-width: 0;
+        width: 100%;
+        padding: 28px 20px;
+        border-radius: 14px;
     }
 }
 </style>

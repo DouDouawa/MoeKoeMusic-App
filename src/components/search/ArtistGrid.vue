@@ -162,4 +162,59 @@ const onArtistClick = (artist) => {
   font-size: 12px;
   color: #666;
 }
+/* 手机：五列 150px 头像在 320px 屏上会把名字压成竖排，改为自适应列数 + 小头像。 */
+@media (max-width: 768px) {
+  .artist-grid {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .artist-avatar {
+    height: auto;
+    aspect-ratio: 1 / 1;
+
+    img {
+      width: 72%;
+      height: 72%;
+      min-width: 56px;
+      min-height: 56px;
+    }
+  }
+
+  .artist-info {
+    padding: 8px 6px;
+  }
+
+  .artist-name {
+    font-size: 14px;
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .artist-stats {
+    gap: 8px;
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+
+  .stat-item {
+    font-size: 12px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .artist-counts {
+    gap: 4px;
+    margin-top: 6px;
+  }
+
+  .count-item {
+    font-size: 11px;
+  }
+}
 </style>

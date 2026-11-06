@@ -105,6 +105,7 @@
                         麦克风
                     </button>
                     <button
+                        v-if="!isAndroidNative"
                         class="source-button"
                         :class="{ active: source === 'system' }"
                         :disabled="isBusy"
@@ -116,6 +117,7 @@
                     </button>
                 </div>
                 <div
+                    v-if="!isAndroidNative"
                     ref="deviceSelectRef"
                     class="device-select"
                     :class="{
@@ -181,8 +183,14 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { recognizeAudio } from '@/utils/recognize';
 import PlaylistSelectModal from '@/components/PlaylistSelectModal.vue';
+
+// Android 壳使用原生短时录音桥接：WebView 的 HTTP 自定义 origin 下 getUserMedia 不可靠，
+// 且不能为此更换存储 origin（会丢登录态/缓存）。Web/Electron 继续走 MediaRecorder。
+const isAndroidNative = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+const MoePlayback = isAndroidNative ? registerPlugin('MoePlayback') : null;
 
 const props = defineProps({
     playerControl: Object
@@ -219,6 +227,7 @@ const deviceMenuMaxHeight = ref(280);
 let recorder = null;
 let chunks = [];
 let timer = null;
+let nativeRecording = false;
 let dragStartX = 0;
 let dragPointerId = null;
 let slideTimer = null;
@@ -292,6 +301,8 @@ const selectMic = (deviceId) => {
 };
 
 const setSource = (value) => {
+    // Android 原生桥只支持麦克风；系统音频依赖 getDisplayMedia，WebView 不提供
+    if (isAndroidNative && value === 'system') return;
     source.value = value;
     closeDeviceMenu();
 };
@@ -522,8 +533,74 @@ const recognizeBlob = async (stream) => {
     }
 };
 
+const base64ToPcmBuffer = (base64) => {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    // 奇数长度说明不是合法 16bit PCM，直接按坏数据拒绝
+    if (bytes.length < 2 || bytes.length % 2 !== 0) throw new Error('录音数据不完整');
+    return bytes.buffer;
+};
+
+const startNativeRecording = async () => {
+    closeDeviceMenu();
+    status.value = 'recording';
+    matches.value = [];
+    selectedIndex.value = 0;
+    errorMsg.value = '';
+    seconds.value = 0;
+
+    try {
+        await MoePlayback.startRecording();
+        nativeRecording = true;
+        timer = setInterval(() => {
+            seconds.value += 1;
+            if (seconds.value >= MAX_SECONDS) stopRecording();
+        }, 1000);
+    } catch (error) {
+        nativeRecording = false;
+        clearTimer();
+        status.value = 'failed';
+        errorMsg.value = '无法使用麦克风，请在系统设置中允许录音权限后重试';
+    }
+};
+
+const stopNativeRecording = async (shouldRecognize) => {
+    clearTimer();
+    if (!nativeRecording) return;
+    nativeRecording = false;
+
+    if (!shouldRecognize) {
+        // 离页/重置：先取消采集，避免麦克风被占用
+        try { await MoePlayback.stopRecording({ cancel: true }); } catch { /* 已停止 */ }
+        return;
+    }
+
+    status.value = 'recognizing';
+    try {
+        const result = await MoePlayback.stopRecording({ cancel: false });
+        const pcm = base64ToPcmBuffer(result?.pcmBase64 || '');
+        if (Number(result?.sampleRate) !== SAMPLE_RATE) {
+            throw new Error(`采样率不匹配：${result?.sampleRate}`);
+        }
+        const matchesResult = await recognizeAudio(pcm);
+        matches.value = matchesResult;
+        selectedIndex.value = 0;
+        status.value = matchesResult.length ? 'success' : 'failed';
+        errorMsg.value = matchesResult.length ? '' : '未识别到歌曲，请靠近音源重试';
+    } catch (error) {
+        console.error('识曲失败:', error);
+        status.value = 'failed';
+        errorMsg.value = '识别过程出错';
+    }
+};
+
 const startRecording = async () => {
     if (isBusy.value) return;
+    if (isAndroidNative) {
+        await startNativeRecording();
+        return;
+    }
     if (!navigator.mediaDevices?.getUserMedia) {
         status.value = 'failed';
         errorMsg.value = '当前环境不支持录音';
@@ -563,6 +640,10 @@ const startRecording = async () => {
 };
 
 const stopRecording = (shouldRecognize = true) => {
+    if (isAndroidNative) {
+        void stopNativeRecording(shouldRecognize);
+        return;
+    }
     clearTimer();
     if (!recorder || recorder.state === 'inactive') return;
     if (!shouldRecognize) {
@@ -642,6 +723,7 @@ onBeforeUnmount(() => {
 });
 
 onMounted(() => {
+    if (isAndroidNative) return;
     void loadMicDevices();
     window.addEventListener('pointerdown', handleWindowPointerDown);
     window.addEventListener('resize', handleWindowResize);
@@ -1618,5 +1700,88 @@ onMounted(() => {
         }
     }
 
+}
+/* 手机断点统一到 768：录音主按钮与结果卡片必须始终可达。
+   竖屏：单列、卡片宽度按视口算；横屏低高度：压缩装饰与大圆环，避免主按钮被挤出屏幕。 */
+@media (max-width: 768px) {
+    .recognize-page {
+        min-height: calc(100dvh - var(--app-header-height, 56px) - var(--app-player-height, 76px));
+        padding: calc(12px + var(--app-safe-top, 0px)) 12px calc(12px + var(--app-safe-bottom, 0px));
+        box-sizing: border-box;
+    }
+
+    .record-button {
+        width: 88px;
+        height: 88px;
+    }
+
+    .source-button,
+    .device-trigger,
+    .device-option,
+    .recognize-actions button,
+    .card-action {
+        min-height: 44px;
+    }
+
+    .card-action {
+        min-width: 44px;
+    }
+
+    .source-row,
+    .device-select {
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .device-trigger-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .result-carousel {
+        min-height: 0;
+    }
+
+    .card-track {
+        --card-width: min(280px, 82vw);
+    }
+
+    .hero-info h3,
+    .hero-info p {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
+@media (max-width: 900px) and (max-height: 480px) {
+    .recognize-page {
+        align-items: center;
+        min-height: 0;
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+
+    .decor-note,
+    .decor-ring {
+        display: none;
+    }
+
+    .record-button {
+        width: 64px;
+        height: 64px;
+    }
+
+    .result-carousel {
+        min-height: 0;
+    }
+
+    .card-track {
+        --card-width: min(220px, 46vw);
+    }
+
+    .hero-tools {
+        bottom: 10px;
+    }
 }
 </style>

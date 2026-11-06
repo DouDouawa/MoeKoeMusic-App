@@ -10,7 +10,8 @@
             </div>
 
             <div class="video-wrapper" v-if="videoUrl">
-                <video ref="videoPlayer" class="video-element" :src="videoUrl" controls autoplay
+                <video ref="videoPlayer" class="video-element" :src="videoUrl" controls autoplay playsinline
+                    webkit-playsinline x5-playsinline disablepictureinpicture="false"
                     @error="handleVideoError" @loadedmetadata="handleVideoLoaded">
                     您的浏览器不支持视频播放
                 </video>
@@ -142,10 +143,13 @@ onBeforeUnmount(() => {
 .video-player-page {
     width: 100%;
     height: 100vh;
+    height: 100dvh;
     background-color: #000;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: var(--app-safe-top, 0px) var(--app-safe-right, 0px) var(--app-safe-bottom, 0px) var(--app-safe-left, 0px);
+    box-sizing: border-box;
 }
 
 .video-container {
@@ -198,6 +202,43 @@ onBeforeUnmount(() => {
     height: 100%;
     max-height: 100%;
     object-fit: contain;
+    background: #000;
+}
+
+@media (max-width: 768px) {
+    .video-header {
+        gap: 10px;
+        padding: 8px 10px;
+        flex-shrink: 0;
+    }
+
+    .back-btn {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 15px;
+    }
+
+    .video-title {
+        font-size: 15px;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .video-wrapper { min-height: 0; }
+    .retry-btn { min-height: 44px; }
+}
+
+/* 横屏低高度：头部压缩，视频占满剩余高度 */
+@media (max-width: 900px) and (max-height: 480px) {
+    .video-header { padding: 4px 8px; }
+    .back-btn { min-height: 36px; font-size: 14px; }
+    .video-title { font-size: 14px; }
 }
 
 .loading-container,

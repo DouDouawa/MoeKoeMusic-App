@@ -1,7 +1,7 @@
 <template>
     <header class="app-header">
         <nav class="navigation">
-            <div class="navigation">
+            <div class="navigation desktop-history">
                 <button class="nav-arrow" @click="goBack" :disabled="!canGoBack">
                     <i class="fas fa-chevron-left"></i>
                 </button>
@@ -12,29 +12,17 @@
                     <i class="fas fa-redo"></i>
                 </button>
             </div>
-            <div class="nav-links">
+            <div class="nav-links" @click="clearNavHover">
                 <router-link to="/">{{ $t('shou-ye') }}</router-link>
                 <router-link to="/discover">{{ $t('fa-xian') }}</router-link>
                 <router-link to="/library">{{ $t('yin-le-ku') }}</router-link>
             </div>
             <div class="search-profile">
-                <div class="search-bar">
-                    <input
-                        v-model="searchQuery"
-                        type="text"
-                        :placeholder="$t('sou-suo-yin-le-ge-shou-ge-dan')"
-                        :readonly="searchMode === 'recommend'"
-                        @click="getSearch"
-                        @keydown.enter="getSearch"
-                    >
-                    <router-link to="/recognize" class="header-recognize-entry" title="听歌识曲">
-                        <i class="fas fa-microphone"></i>
-                    </router-link>
-                </div>
-                <div class="profile" @click="toggleProfile">
-                    <img :src="MoeAuth.UserInfo ? MoeAuth.UserInfo.pic : './assets/images/profile.jpg'" alt="Profile Picture">
-                    <div v-if="showProfile" class="profile-menu">
+                <div class="profile" role="button" tabindex="0" aria-label="更多功能" :aria-expanded="showProfile" @click="toggleProfile" @keydown.enter.prevent="toggleProfile" @keydown.space.prevent="toggleProfile">
+                    <img :src="MoeAuth.UserInfo?.pic || './assets/images/profile.jpg'" alt="Profile Picture">
+                    <div v-if="showProfile" class="profile-menu" @click.stop="showProfile = false">
                         <ul>
+                            <li class="mobile-menu-entry"><router-link to="/recognize"><i class="fas fa-microphone"></i>听歌识曲</router-link></li>
                             <li>
                                 <router-link to="/settings">
                                     <i class="fas fa-cog"></i> {{ $t('she-zhi') }}
@@ -82,9 +70,9 @@ import { MoeAuthStore } from '../stores/store';
 import { useI18n } from 'vue-i18n';
 import AppUpdateDialog from './AppUpdateDialog.vue';
 import { ABOUT_DISCLAIMER_KEYS, DISCLAIMER_BANNER_SRC } from '../config/disclaimer';
+import { useDismissableOverlay } from '@/composables/useDismissableOverlay';
 
 const MoeAuth = MoeAuthStore();
-const searchQuery = ref('');
 const isDisclaimerVisible = ref(false);
 const router = useRouter();
 const route = useRoute();
@@ -95,8 +83,11 @@ const { t } = useI18n();
 const showNewBadge = ref(false);
 const appVersion = ref('');
 const platform = ref('');
-const searchMode = ref('quick');
 const showProfile = ref(false);
+// 二级菜单和「关于」弹层都要进弹层栈：不然返回手势会穿透过去，
+// 在首页直接走到「隐藏应用」，用户看到的却是界面卡住出不去。
+useDismissableOverlay(showProfile, () => { showProfile.value = false; });
+useDismissableOverlay(isDisclaimerVisible, () => { isDisclaimerVisible.value = false; });
 const updateDialogRef = ref(null);
 const removeAfterEach = router.afterEach(() => {
     updateNavigationStatus();
@@ -151,6 +142,22 @@ const refreshPage = () => {
     window.location.reload();
 };
 
+/**
+ * 触摸屏上 tap 过的链接会一直保持 :hover / :focus，切换路由后粉色 active 底没了，
+ * 那条灰底却留在旧按钮上。点击后主动把焦点和 hover 态清掉。
+ */
+const clearNavHover = (event) => {
+    const link = event.target.closest('a');
+    if (!link) return;
+    link.blur();
+    // 指针停在该位置时 :hover 不会自己消失，把它从命中测试里摘掉再放回去。
+    const { pointerEvents } = link.style;
+    link.style.pointerEvents = 'none';
+    requestAnimationFrame(() => {
+        link.style.pointerEvents = pointerEvents;
+    });
+};
+
 const logout = async () => {
     const result = await window.$modal.confirm(t('ni-que-ren-yao-tui-chu-deng-lu-ma'));
     if (result) {
@@ -163,37 +170,6 @@ const toggleProfile = () => {
     showProfile.value = !showProfile.value;
 };
 
-const getSearch = () => {
-    const keyword = searchQuery.value.trim();
-    const settings = JSON.parse(localStorage.getItem('settings')) || {};
-    searchMode.value = settings?.searchMode === 'recommend' ? 'recommend' : 'quick';
-
-    if (searchMode.value === 'recommend') {
-        const nextQuery = keyword ? { q: keyword } : {};
-        if (route.path === '/search/recommend' && JSON.stringify(route.query) === JSON.stringify(nextQuery)) {
-            return;
-        }
-        router.push({
-            path: '/search/recommend',
-            query: nextQuery
-        });
-        return;
-    }
-
-    if (keyword !== '') {
-        if (keyword.includes('collection_')) {
-            router.push({
-                path: '/PlaylistDetail',
-                query: { global_collection_id: keyword }
-            });
-            return;
-        }
-        router.push({
-            path: '/search',
-            query: { q: keyword }
-        });
-    }
-};
 
 const handleClickOutside = (event) => {
     const queueProfile = document.querySelector('.profile-menu');
@@ -228,6 +204,12 @@ const handleUpdateEntryClick = () => {
 .navigation {
     display: flex;
     gap: 10px;
+}
+
+/* 手机专用入口：桌面端必须彻底隐藏，否则会多出一个汉堡按钮 */
+.mobile-header-button,
+.mobile-menu-entry {
+    display: none;
 }
 
 .nav-arrow {
@@ -304,8 +286,6 @@ header::before {
 
 .nav-arrow,
 .nav-links a,
-.search-bar input,
-.header-recognize-entry,
 .profile,
 .profile img {
     -webkit-app-region: no-drag;
@@ -341,8 +321,12 @@ header::before {
         margin-right: 12px;
         margin-left: 12px;
 
-        &:hover {
-            background: var(--color-secondary-bg-for-transparent);
+        /* 悬停底灰只给真正有指针的设备。触摸屏上 tap 过之后 :hover 会一直粘着，
+           切换页面后粉色 active 底没了，这条灰底却留在刚才点的那个按钮上。 */
+        @media (hover: hover) and (pointer: fine) {
+            &:hover {
+                background: var(--color-secondary-bg-for-transparent);
+            }
         }
 
         &:active {
@@ -362,63 +346,26 @@ header::before {
     gap: 20px;
 }
 
-.search-bar {
-    position: relative;
 
-    input {
-        box-sizing: border-box;
-        padding: 8px 42px 8px 15px;
-        border-radius: 20px;
-        border: 1px solid var(--secondary-color);
-        font-size: 14px;
-        width: 200px;
-        transition: width 0.3s ease;
-
-        &:focus {
-            width: 250px;
-            outline: none;
-            border-color: var(--primary-color);
-        }
-    }
-}
-
-.header-recognize-entry {
-    position: absolute;
-    top: 50%;
-    right: 1px;
-    width: 30px;
-    height: 30px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    color: #6a6a6a;
-    text-decoration: none;
-    transition: 0.2s;
-
-    &:hover {
-        color: var(--color-primary);
-        background: var(--header-nav-hover-bg);
-    }
-
-    &:active {
-        transform: translateY(-50%) scale(0.92);
-    }
-
-    transform: translateY(-50%);
-}
 
 .profile {
     width: 40px;
     height: 40px;
-    border-radius: 50%;
+    // 圆角方块：用百分比让 40px(桌面)/44px(手机) 两档尺寸自动保持同样观感，
+    // 不用为每个断点各写一个固定像素值
+    border-radius: 30%;
     background-color: var(--secondary-color);
     cursor: pointer;
     position: relative;
 
     img {
-        width: 41px;
-        border-radius: 50%;
+        // 原先是 width: 41px 塞在 40px 容器里，圆形时看不出来，
+        // 换成圆角后这 1px 错位会让两个圆角对不齐，改成撑满容器
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: inherit;
+        display: block;
     }
 }
 
@@ -553,5 +500,145 @@ header::before {
     right: 10px;
     font-size: 12px;
     color: #666;
+}
+/* ===== 移动端顶栏：压缩为单行紧凑布局 ===== */
+@media (max-width: 768px) {
+    header {
+        /* 上下 6px + 44px 触控区 = 56px，正好等于 --app-header-height，
+           滚动容器的 padding-top 依赖这个值，两边必须一致。 */
+        padding: 6px 0;
+    }
+
+    .navigation {
+        gap: 8px;
+        padding: 0 12px;
+    }
+
+    /* 汉堡：打开导航抽屉；搜索：直达推荐搜索页 */
+    .mobile-header-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 44px;
+        width: 44px;
+        height: 44px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--header-nav-icon);
+        font-size: 17px;
+        cursor: pointer;
+
+        &:active {
+            background: var(--header-nav-hover-bg);
+        }
+    }
+
+    /* 手机顶栏只保留核心导航；历史前进/后退交给抽屉与系统手势 */
+    .desktop-history {
+        display: none;
+    }
+
+    .mobile-menu-entry {
+        display: block;
+
+        > button {
+            width: 100%;
+            margin: 0;
+            justify-content: flex-start;
+            gap: 10px;
+            padding: 8px 6px;
+            border: 0;
+            border-radius: 5px;
+            background: transparent;
+            color: inherit;
+            font-size: 14px;
+            text-align: left;
+            min-height: 44px;
+        }
+
+        > button:disabled {
+            opacity: 0.45;
+        }
+    }
+
+    /* 前进/后退是桌面浏览器式控件，手机上有系统手势替代；
+       但「刷新」要保留 —— 改完 RPC 地址需要刷新才生效 */
+    .navigation > .navigation {
+        flex: 0 0 auto;
+        gap: 0;
+        padding: 0;
+
+        .nav-arrow:nth-child(1),
+        .nav-arrow:nth-child(2) {
+            display: none;
+        }
+
+        .nav-arrow {
+            padding: 4px;
+
+            i {
+                font-size: 15px;
+            }
+        }
+    }
+
+    .nav-links {
+        flex: 0 0 auto;
+        gap: 2px;
+        justify-content: flex-start;
+
+        a {
+            /* 触控目标 44px：只加内边距会撑高顶栏，用 min-height + 垂直居中来
+               保证高度，同时保持药丸底色的形状。 */
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            margin: 0;
+            padding: 0 10px;
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            border-radius: 999px;
+        }
+
+        /* router-link 加的是这个类，原来的 &.active 永远不会命中 */
+        a.router-link-exact-active {
+            color: var(--color-primary);
+            background: rgba(var(--primary-color-rgb), 0.12);
+        }
+    }
+
+    .search-profile {
+        flex: 1;
+        min-width: 0;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+
+
+
+    .profile {
+        flex: 0 0 auto;
+        width: 44px;
+        height: 44px;
+    }
+
+    .profile-menu {
+        /* 头像移到 44px 后菜单要跟着下移，否则会盖住头像 */
+        top: 52px;
+        width: 136px;
+        padding: 6px;
+        gap: 4px;
+
+        li a {
+            gap: 10px;
+            padding: 8px 6px;
+            font-size: 14px;
+        }
+    }
 }
 </style>

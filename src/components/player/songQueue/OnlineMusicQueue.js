@@ -1,5 +1,15 @@
 import { get } from '../../../utils/request';
 import { MoeAuthStore } from '../../../stores/store';
+import { isNetworkFailure } from '../../../utils/networkError';
+
+/**
+ * 响应是否是一个合法的 API 数据包。
+ * 只有服务端真的回了结构化 JSON 才谈得上「这首歌能不能放」；
+ * 门户页 HTML、代理错误页、空响应都不是内容判断，而是链路故障。
+ */
+export const isApiPayload = (response) =>
+    !!response && typeof response === 'object' && typeof response.status === 'number';
+
 
 const QUALITY_LEVELS = ['128', '320', 'flac', 'high', 'viper_atmos', 'viper_clear', 'viper_tape'];
 const QUALITY_LABELS = {
@@ -189,7 +199,14 @@ export default function useOnlineMusicQueue(t, musicQueueStore, currentSong, tim
 
             if (isStaleRequest()) return { stale: true };
 
-            if (!response || response.status !== 1) {
+            if (!isApiPayload(response)) {
+                // Wi-Fi 还连着但外网断了时，代理/门户常会回一个 HTML 页或空响应。
+                // 这不是「这首歌唱不了」，而是链路故障——必须走重试，不能切歌。
+                console.error('[SongQueue] 响应不是有效 API 数据，按网络故障处理:', response);
+                return { error: true, networkError: true };
+            }
+
+            if (response.status !== 1) {
                 console.error('[SongQueue] 获取音乐URL失败:', response);
                 currentSong.value.author = currentSong.value.name = t('huo-qu-yin-le-shi-bai');
                 if (response?.status == 3) {
@@ -226,6 +243,7 @@ export default function useOnlineMusicQueue(t, musicQueueStore, currentSong, tim
                 qualityLabel: getQualityLabel(selectedCandidate.quality),
                 qualityOptions: qualityOptions.map(option => ({ ...option })),
                 mixsongid: mixSongId,
+                isPreview: !isAuth || !!response.is_free_part || !!response.isPreview,
                 name: name,
                 img: img,
                 author: author,
@@ -271,6 +289,11 @@ export default function useOnlineMusicQueue(t, musicQueueStore, currentSong, tim
             if (error.response?.data?.status == 2) {
                 window.$modal.alert(t('deng-lu-shi-xiao-qing-zhong-xin-deng-lu'));
                 return { error: true};
+            }
+            // 网络类失败（断网/超时/连接被拒）：请求没拿到任何响应。
+            // 这类失败必须能和「这首歌唱不了」区分开，否则断网会被当成版权问题去切歌。
+            if (isNetworkFailure(error)) {
+                return { error: true, networkError: true };
             }
             if (musicQueueStore.queue.length === 0) return { error: true };
             currentSong.value.author = t('3-miao-hou-zi-dong-qie-huan-xia-yi-shou');
@@ -344,6 +367,7 @@ export default function useOnlineMusicQueue(t, musicQueueStore, currentSong, tim
     };
 
     return {
+        cancelPendingOnline: () => { activeSongRequestId += 1; },
         addSongToQueue,
         getPlaylistAllSongs,
         addPlaylistToQueue,

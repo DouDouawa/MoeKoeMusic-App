@@ -1,4 +1,10 @@
+import { isNativePlayback } from '../../utils/nativePlayback';
+
 export default function useMediaSession() {
+  if (isNativePlayback()) {
+    const noop = () => {};
+    return { initMediaSession: noop, changeMediaSession: noop, updatePositionState: noop, clearPositionState: noop };
+  }
   // 初始化媒体会话
   const initMediaSession = (handlers) => {
     if (!("mediaSession" in navigator) || !navigator.mediaSession) return;

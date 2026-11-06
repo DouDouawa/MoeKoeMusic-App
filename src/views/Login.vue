@@ -1034,4 +1034,70 @@ h2 {
     height: 170px;
   }
 }
+/* 手机：原来 height:calc(100vh - 230px)+overflow:hidden 会在软键盘弹出、横屏或短屏时
+   把登录按钮直接裁掉且无法滚动。改为最小高度 + dvh + 允许纵向滚动。 */
+@media (max-width: 768px) {
+  .login-page {
+    height: auto;
+    min-height: calc(100vh - var(--app-header-height, 56px) - var(--app-player-height, 76px));
+    min-height: calc(100dvh - var(--app-header-height, 56px) - var(--app-player-height, 76px));
+    align-items: flex-start;
+    padding: calc(16px + var(--app-safe-top, 0px)) 14px calc(16px + var(--app-safe-bottom, 0px));
+    overflow: visible;
+    box-sizing: border-box;
+  }
+
+  .login-container {
+    width: 100%;
+    max-width: 420px;
+    margin: auto;
+    padding: 22px 16px 18px;
+    border-radius: 16px;
+    overflow: visible;
+  }
+
+  .segmented-control {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar { display: none; }
+  }
+
+  .segmented-button {
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 0 14px;
+    white-space: nowrap;
+  }
+
+  .form-input,
+  .primary-button,
+  .append-button,
+  .back-button,
+  .account-item {
+    min-height: 44px;
+  }
+
+  .primary-button {
+    font-size: 16px;
+  }
+
+  .account-item {
+    gap: 10px;
+  }
+
+  .account-name,
+  .account-status {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .disclaimer,
+  .register-link {
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+}
 </style>

@@ -6,7 +6,7 @@
         @focusout="handleFocusOut"
     >
         <span class="settings-guide-anchor" aria-hidden="true"></span>
-        <button type="button" class="settings-handle" :title="t('she-zhi')" :aria-label="t('she-zhi')" @mouseenter="openPanel" @focus="openPanel"></button>
+        <button type="button" class="settings-handle" :title="t('she-zhi')" :aria-label="t('she-zhi')" :aria-expanded="isOpen" @mouseenter="openPanel" @focus="openPanel" @click="togglePanel"></button>
         <div class="settings-panel">
             <div class="settings-row">
                 <span class="settings-label">{{ t('ge-ci-bei-jing') }}</span>
@@ -90,6 +90,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useDismissableOverlay } from '@/composables/useDismissableOverlay';
 
 const props = defineProps({
     modelValue: {
@@ -157,6 +158,13 @@ const openPanel = () => {
 const closePanel = () => {
     isOpen.value = false;
 };
+
+// 触屏没有 hover，手柄点击必须能开合；返回/Escape 关闭最上层面板。
+const togglePanel = () => {
+    isOpen.value = !isOpen.value;
+};
+
+useDismissableOverlay(isOpen, closePanel);
 
 const handleFocusOut = (event) => {
     if (!event.currentTarget.contains(event.relatedTarget)) closePanel();
@@ -318,5 +326,47 @@ onMounted(() => {
             background: #fff;
         }
     }
+}
+
+@media (max-width: 768px) {
+    .fullscreen-lyrics-settings {
+        width: auto;
+        max-width: calc(100vw - 12px);
+        transform: translateY(-50%) translateX(calc(100% - 26px));
+    }
+
+    .fullscreen-lyrics-settings.open {
+        transform: translateY(-50%) translateX(0);
+        width: auto;
+    }
+
+    .settings-handle {
+        width: 26px;
+        height: 72px;
+        border-radius: 8px 0 0 8px;
+    }
+
+    .settings-guide-anchor {
+        left: -12px;
+        width: 40px;
+    }
+
+    .settings-panel {
+        width: min(280px, calc(100vw - 46px));
+        max-height: calc(100dvh - 40px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 10px;
+        padding-bottom: calc(10px + var(--app-safe-bottom, 0px));
+    }
+
+    .setting-options button {
+        min-height: 36px;
+    }
+}
+
+/* 手机横屏低高度：面板整体可滚动，避免底部选项被裁掉 */
+@media (max-height: 480px) and (max-width: 900px) {
+    .settings-panel { max-height: calc(100dvh - 16px); }
 }
 </style>

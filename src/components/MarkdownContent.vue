@@ -213,6 +213,10 @@ const tokenProps = (token) => {
     color: #333;
     font-size: 14px;
     line-height: 1.65;
+    /* 更新日志里常有整条 GitHub 链接，不打断就会横向撑破弹层 */
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    min-width: 0;
 
     h2,
     h3,

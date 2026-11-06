@@ -64,7 +64,8 @@ export default defineConfig({
         short_name: 'MoeKoe',
         description: '一个高颜值的kugou第三方播放器',
         theme_color: '#FF69B4',
-        background_color: '#ffffff',
+        background_color: '#FFF4F8',
+        lang: 'zh-CN',
         display: 'standalone',
         start_url: '/',
         display_override: [
@@ -75,9 +76,28 @@ export default defineConfig({
         ],
         icons: [
           {
-            src: '/assets/images/logo.png',
-            sizes: '256x256',
-            type: 'image/png'
+            src: 'assets/mobile-icons/pwa-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: 'assets/mobile-icons/pwa-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: 'assets/mobile-icons/maskable-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+          {
+            src: 'assets/mobile-icons/maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       }
@@ -91,6 +111,20 @@ export default defineConfig({
   server: {
     host: true,
     port: 8080, // 将开发服务器端口设置为8080，确保与其他服务兼容
+    // 真机调试时把 API 也代理到同一个源：设备身份走 Set-Cookie，
+    // 跨源会被浏览器直接拦死，所以前端必须和 /api 同源。
+    // 开关故意不叫 VITE_* —— vite 会接管 VITE_ 前缀的环境变量，
+    // 配置求值时读到的可能已被覆盖。正常开发不设这个变量，行为完全不变。
+    proxy: process.env.MOEKOE_DEV_API_PROXY === '1' ? {
+      '/api': {
+        // 默认指向本机后端。要连线上后端时用 MOEKOE_DEV_API_TARGET 指定，
+        // 浏览器只看到同源的 /api，不需要后端放行 CORS。
+        target: (process.env.MOEKOE_DEV_API_TARGET ||
+          `http://127.0.0.1:${process.env.MOEKOE_DEV_API_PORT || 6521}`).replace(/\/+$/, ''),
+        changeOrigin: !!process.env.MOEKOE_DEV_API_TARGET,
+        rewrite: path => path.replace(/^\/api/, '') || '/'
+      }
+    } : undefined
   },
   resolve: {
     alias: {

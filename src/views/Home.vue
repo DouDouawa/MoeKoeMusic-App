@@ -1,7 +1,7 @@
 <template>
     <div class="container">
         <HomeRecommendations :playerControl="playerControl" />
-        <h2 class="section-title">
+        <h2 id="daily-recommend" class="section-title">
             <img :src="`./assets/images/home/mama.png`" class="mama" @click="addAllSongsToQueue">
             {{ $t('mei-ri-tui-jian') }}
         </h2>
@@ -15,6 +15,7 @@
                     <div class="song-title">{{ song.ori_audio_name }}</div>
                     <div class="song-artist">{{ song.author_name }}</div>
                 </div>
+                <button class="mobile-more-button" :aria-label="`${song.ori_audio_name} 更多操作`" @click.stop="showContextMenu($event, song)"><i class="fas fa-ellipsis-h"></i></button>
             </div>
         </div>
         <h2 class="section-title">{{ $t('tui-jian-ge-dan') }}</h2>
@@ -426,6 +427,195 @@ const addAllSongsToQueue = () => {
 
     .playlist-item {
         padding: 8px;
+    }
+}
+
+/* ===== 移动端：仿网易云首页布局 ===== */
+@media screen and (max-width: 768px) {
+    .container {
+        padding: 10px 14px 24px;
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 18px;
+        font-weight: 700;
+        margin-top: 22px;
+        margin-bottom: 12px;
+
+        .mama {
+            position: static;
+            margin-left: 0;
+            height: 22px;
+            width: auto;
+            flex: 0 0 auto;
+        }
+    }
+
+    /* 每日推荐：横向滑动卡片 */
+    .song-list {
+        display: flex;
+        grid-template-columns: none;
+        gap: 12px;
+        margin: 0 0 22px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-snap-type: x proximity;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 6px;
+
+        &::-webkit-scrollbar {
+            display: none;
+        }
+    }
+
+    .song-item {
+        flex: 0 0 104px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+        padding: 0;
+        background-color: transparent;
+        border-radius: 0;
+        box-shadow: none;
+        scroll-snap-align: start;
+
+        &::before,
+        &::after {
+            display: none;
+        }
+
+        &:hover {
+            transform: none;
+            background-color: transparent;
+            box-shadow: none;
+        }
+    }
+
+    .song-cover {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1 / 1;
+        border-radius: 10px;
+    }
+
+    .song-info {
+        padding-right: 0;
+    }
+
+    .song-title {
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .song-artist {
+        margin-top: 2px;
+        font-size: 11px;
+        opacity: 0.72;
+    }
+
+    /* 推荐歌单：3 列 */
+    .playlist-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .playlist-item {
+        padding: 0;
+        background-color: transparent;
+        border-radius: 0;
+        box-shadow: none;
+
+        &:hover {
+            transform: none;
+            box-shadow: none;
+
+            .playlist-cover {
+                transform: none;
+            }
+        }
+    }
+
+    .playlist-cover-wrap {
+        border-radius: 10px;
+    }
+
+    .playlist-info {
+        padding: 6px 0 0;
+    }
+
+    .playlist-title {
+        margin-bottom: 0;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1.35;
+        min-height: 0;
+        color: var(--home-song-title);
+        -webkit-line-clamp: 2;
+    }
+
+    /* 网易云首页不显示歌单长简介，省空间 */
+    .playlist-description {
+        display: none;
+    }
+}
+/* 手机：歌曲卡片改为「封面 + 两行文本 + 常显更多」，行内不再靠 hover 才出现操作；
+   播放按钮的 hover 装饰在触屏上没意义，隐藏它腾出宽度。 */
+@media screen and (max-width: 768px) {
+    .song-item {
+        gap: 8px;
+        padding-right: 4px;
+
+        &::before,
+        &::after {
+            display: none;
+        }
+
+        &:hover .song-info {
+            padding-right: 0;
+        }
+    }
+
+    .song-title {
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        word-break: break-word;
+    }
+
+    .mobile-more-button {
+        /* .song-item 在手机上是 flex-direction: column 的横向卡片，按钮作为
+           第三个子项会被排到封面和歌名下面、和文字之间空出一大截。
+           改成贴卡片右上角，符合卡片式列表的惯例，也不占垂直空间。 */
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        flex: 0 0 auto;
+        width: 32px;
+        height: 32px;
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        border: 0;
+    }
+
+    .section-title .mama {
+        position: static;
+        height: 26px;
+        margin-left: 0;
+    }
+}
+
+@media screen and (max-width: 420px) {
+    /* 封面尺寸交给上面 768px 断点（width:100% + aspect-ratio）统一处理：
+       这里再写死 42px 会把横向卡片里的封面缩成小方块，右侧空出一大片。 */
+
+    .playlist-grid {
+        grid-template-columns: repeat(auto-fill, minmax(126px, 1fr));
+        gap: 10px;
     }
 }
 </style>

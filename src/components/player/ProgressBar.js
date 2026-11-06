@@ -42,85 +42,66 @@ export default function useProgressBar(audio, resetLyricsHighlight) {
         }
     };
 
+    // 指针拖动：鼠标、触摸、手写笔共用一条路径。
+    // 原来只挂 mousedown/mousemove，触屏上根本拖不动进度条。
+    const previewFromClientX = (clientX) => {
+        const bar = activeProgressBar.value;
+        if (!bar || !audio.duration) return null;
+        const rect = bar.getBoundingClientRect();
+        const offsetX = Math.max(0, Math.min(clientX - rect.left, rect.width));
+        const percentage = rect.width ? Math.max(0, Math.min((offsetX / rect.width) * 100, 100)) : 0;
+        progressWidth.value = percentage;
+        tooltipPosition.value = offsetX;
+        tooltipTime.value = formatTime((percentage / 100) * audio.duration);
+        return percentage;
+    };
+
+    const stopProgressDrag = () => {
+        document.removeEventListener('pointermove', onProgressDrag);
+        document.removeEventListener('pointerup', onProgressDragEnd);
+        document.removeEventListener('pointercancel', onProgressDragEnd);
+    };
+
     // 进度条拖动开始
     const onProgressDragStart = (event) => {
-        event.preventDefault();
-
-        const currentProgressBar = event.target.closest('.progress-bar');
-        if (!currentProgressBar) return;
-
-        // 检查是否点击在小圆点上
-        const handle = event.target.closest('.progress-handle');
-        if (!handle) {
-            if (!audio.duration) return;
-            const rect = currentProgressBar.getBoundingClientRect();
-            const offsetX = Math.max(0, Math.min(event.clientX - rect.left, currentProgressBar.offsetWidth));
-            const percentage = (offsetX / currentProgressBar.offsetWidth) * 100;
-            progressWidth.value = Math.max(0, Math.min(percentage, 100));
-        }
-
+        const bar = event.target.closest('.progress-bar');
+        if (!bar || !audio.duration) return;
+        // 触摸时不让浏览器把这次滑动解释成页面滚动
+        if (event.pointerType !== 'mouse') event.preventDefault();
+        activeProgressBar.value = bar;
         isProgressDragging.value = true;
         isDraggingHandle.value = true;
-        activeProgressBar.value = currentProgressBar;
-
-        document.addEventListener('mousemove', onProgressDrag);
-        document.addEventListener('mouseup', onProgressDragEnd);
+        showTimeTooltip.value = true;
+        previewFromClientX(event.clientX);
+        document.addEventListener('pointermove', onProgressDrag);
+        document.addEventListener('pointerup', onProgressDragEnd);
+        document.addEventListener('pointercancel', onProgressDragEnd);
     };
 
     // 进度条拖动中
     const onProgressDrag = (event) => {
-        event.preventDefault();
-        if (isProgressDragging.value && activeProgressBar.value) {
-            const rect = activeProgressBar.value.getBoundingClientRect();
-            const offsetX = Math.max(0, Math.min(event.clientX - rect.left, activeProgressBar.value.offsetWidth));
-            const percentage = (offsetX / activeProgressBar.value.offsetWidth) * 100;
-            progressWidth.value = Math.max(0, Math.min(percentage, 100));
-
-            // 更新时间提示
-            tooltipPosition.value = offsetX;
-            const time = (percentage / 100) * audio.duration;
-            tooltipTime.value = formatTime(time);
-        }
+        if (!isProgressDragging.value) return;
+        if (event.cancelable) event.preventDefault();
+        previewFromClientX(event.clientX);
     };
 
     // 进度条拖动结束
     const onProgressDragEnd = (event) => {
-        if (isProgressDragging.value && activeProgressBar.value) {
-            const rect = activeProgressBar.value.getBoundingClientRect();
-            const offsetX = Math.max(0, Math.min(event.clientX - rect.left, activeProgressBar.value.offsetWidth));
-            const percentage = (offsetX / activeProgressBar.value.offsetWidth) * 100;
-            const newTime = (percentage / 100) * audio.duration;
-
-            audio.currentTime = Math.max(0, Math.min(newTime, audio.duration));
-            resetLyricsHighlight(audio.currentTime);
+        if (isProgressDragging.value) {
+            const percentage = previewFromClientX(event.clientX);
+            if (percentage !== null && audio.duration) {
+                const newTime = (percentage / 100) * audio.duration;
+                audio.currentTime = Math.max(0, Math.min(newTime, audio.duration));
+                resetLyricsHighlight(audio.currentTime);
+            }
         }
-
         isProgressDragging.value = false;
         isDraggingHandle.value = false;
         showTimeTooltip.value = false;
         activeProgressBar.value = null;
-        document.removeEventListener('mousemove', onProgressDrag);
-        document.removeEventListener('mouseup', onProgressDragEnd);
+        stopProgressDrag();
     };
 
-    // 点击进度条更新进度
-    const updateProgressFromEvent = (event) => {
-        if (isProgressDragging.value) return; // 如果正在拖动则不处理点击
-
-        const progressBar = event.target.closest('.progress-bar');
-        if (!progressBar || !audio.duration) return;
-
-        const rect = progressBar.getBoundingClientRect();
-        const offsetX = Math.max(0, Math.min(event.clientX - rect.left, progressBar.offsetWidth));
-        const percentage = (offsetX / progressBar.offsetWidth) * 100;
-        const newTime = (percentage / 100) * audio.duration;
-
-        audio.currentTime = Math.max(0, Math.min(newTime, audio.duration));
-        progressWidth.value = percentage;
-        resetLyricsHighlight(audio.currentTime);
-    };
-
-    // 更新时间提示
     const updateTimeTooltip = (event) => {
         const progressBar = event.target.closest('.progress-bar');
         if (!progressBar || !audio.duration) return;
@@ -162,7 +143,6 @@ export default function useProgressBar(audio, resetLyricsHighlight) {
         getMusicHighlights,
         clearMusicHighlights,
         onProgressDragStart,
-        updateProgressFromEvent,
         updateTimeTooltip,
         hideTimeTooltip
     };

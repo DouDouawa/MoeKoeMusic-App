@@ -1526,4 +1526,143 @@ $shadow-light: 0 2px 10px rgba(0, 0, 0, 0.1);
 .li.cover-view:hover .track-cover-overlay {
     opacity: 1;
 }
+/* 手机：云盘/本地文件列表与歌单详情共用同一套行布局——
+   四列（歌名/歌手/大小/时长）在 320px 屏上必然互相挤压，这里收成「歌名+副标题」，
+   大小列隐藏、时长收窄，行高保持 50px 以匹配 RecycleScroller 的 item-size。 */
+@media (max-width: 768px) {
+    .detail-page {
+        padding: 12px;
+    }
+
+    .detail-sliver-header {
+        gap: 10px;
+        padding: 8px 0;
+        align-items: center;
+    }
+
+    .info {
+        /* flex-basis 必须是 0：用 auto 时会拿内容自然宽度去和封面争行宽，
+           逼出 flex-wrap 换行，标题就掉到第二行并被折叠高度裁掉。 */
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: none;
+        height: auto;
+    }
+
+    .title {
+        white-space: normal;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        word-break: break-word;
+    }
+
+    .subtitle,
+    .meta {
+        font-size: 12px;
+        margin-top: 4px;
+        overflow-wrap: anywhere;
+    }
+
+    .actions {
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .actions button,
+    .primary-btn,
+    .upload-btn,
+    .manage-btn {
+        min-height: 40px;
+    }
+
+    .li,
+    .li.cover-view {
+        height: 50px;
+        padding: 3px 4px;
+        gap: 6px;
+    }
+
+    .track-number,
+    .track-checkbox {
+        width: 22px;
+        margin-right: 4px;
+        flex-shrink: 0;
+    }
+
+    .track-title-container {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .track-artist {
+        flex: 0 0 auto;
+        max-width: 34%;
+        padding: 0 4px;
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* 大小列在窄屏没有信息价值，先隐藏；时长保留但压到最小 */
+    .track-size {
+        display: none;
+    }
+
+    .track-timelen {
+        width: auto;
+        padding-left: 4px;
+        font-size: 12px;
+        flex-shrink: 0;
+    }
+
+    .track-list-header-row {
+        display: none;
+    }
+
+    /* 手机上标题和操作区必须上下排：并排时标题只剩几十像素宽，
+       「云盘歌曲（0）」会折成两行并和「批量操作」按钮叠在一起。 */
+    .track-list-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .track-list-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .search-input {
+        min-width: 0;
+        font-size: 16px;
+    }
+
+    .batch-action-btn,
+    .view-mode-btn,
+    .sort-btn {
+        min-height: 40px;
+    }
+
+    .mobile-more-button {
+        flex: 0 0 40px;
+        width: 40px;
+        height: 44px;
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 900px) and (max-height: 480px) {
+    .detail-sliver-header {
+        padding: 4px 0;
+    }
+
+    .subtitle,
+    .meta {
+        display: none;
+    }
+}
 </style>

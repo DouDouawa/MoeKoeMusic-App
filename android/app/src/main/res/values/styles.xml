@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      应用主题不再继承 DarkActionBar：脚手架的 AppTheme 会带出一条写着应用名的
+      ActionBar，而本项目是 WebView 全屏界面，那条栏纯属多余。
+    -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:background">@null</item>
+    </style>
+
+    <!--
+      启动屏：用本应用的标志（images/hero.png 居中），不是脚手架的蓝 X。
+      Android 12 起系统接管启动屏，只认 windowSplashScreen* 属性；
+      低版本走 android:background 的 @drawable/splash。
+      两条路径共用同一个底色，切换时不会闪出别的颜色。
+    -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+        <!--
+          Theme.SplashScreen.Common 只给了平台属性 android:windowActionBar=false，
+          而 MainActivity 走的是 AppCompat（BridgeActivity 继承 AppCompatActivity），
+          它认的是不带前缀的 windowActionBar / windowNoTitle。少了这两条，主题就带出
+          一条写着应用名的默认 ActionBar，压在 Vue 自己的 Header 之上。这里补齐。
+        -->
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+</resources>

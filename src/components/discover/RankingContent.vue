@@ -826,6 +826,14 @@ onBeforeUnmount(() => {
         margin-left: 10px;
     }
 
+    /* 手机上简介会横向撑到按钮下面被压住：让按钮回到文档流里占据真实宽度，
+       简介自然收窄，而不是压在文字上。桌面端的右上角浮动不受影响。 */
+    .rank-play-btn {
+        position: static;
+        flex: 0 0 40px;
+        margin-left: 8px;
+    }
+
     .rank-title {
         font-size: 16px;
         margin: 0 0 4px 0;
@@ -861,5 +869,39 @@ onBeforeUnmount(() => {
     pointer-events: none;
     z-index: 9999;
     transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* 手机：卡片高度随视口自适应，替代僵硬的 400px。
+   内层 .song-list 的滚动是「滚动到底加载下一页」的触发条件，必须保留，不能改成 overflow:visible。 */
+@media (max-width: 768px) {
+    .ranking-item {
+        height: auto;
+        min-height: 0;
+    }
+
+    .song-list {
+        max-height: min(64dvh, 520px);
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .song-item {
+        min-height: 52px;
+        padding: 8px 6px;
+    }
+
+    .song-content,
+    .song-info { min-width: 0; }
+
+    .song-name,
+    .song-author {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .rank-chip,
+    .rank-selector-toggle {
+        min-height: 40px;
+    }
 }
 </style>

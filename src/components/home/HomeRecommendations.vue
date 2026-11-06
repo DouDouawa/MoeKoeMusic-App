@@ -1,10 +1,38 @@
 <template>
     <section class="home-recommendations-section">
-        <h2 class="section-title recommend-title" role="button" tabindex="0" @click="toggleRecommendCardStyle"
+        <h2 v-if="!isMobile" class="section-title recommend-title" role="button" tabindex="0" @click="toggleRecommendCardStyle"
             @keydown.enter.prevent="toggleRecommendCardStyle" @keydown.space.prevent="toggleRecommendCardStyle">
             {{ $t('tui-jian') }}
         </h2>
-        <div class="recommendations" :class="`recommendations-${recommendCardStyle}`">
+        <!-- 移动端：仿网易云圆形快捷入口 -->
+        <div v-if="isMobile" class="mobile-quick-entries">
+            <button type="button" class="quick-entry" @click="playFM">
+                <span class="quick-entry-icon quick-entry-radio">
+                    <i class="fas fa-headphones"></i>
+                </span>
+                <span class="quick-entry-label">私人漫游</span>
+            </button>
+            <router-link :to="{ path: '/Ranking' }" class="quick-entry">
+                <span class="quick-entry-icon quick-entry-ranking">
+                    <i class="fas fa-chart-line"></i>
+                </span>
+                <span class="quick-entry-label">排行榜</span>
+            </router-link>
+            <a class="quick-entry" @click="scrollToDaily">
+                <span class="quick-entry-icon quick-entry-daily">
+                    <i class="fas fa-calendar-day"></i>
+                </span>
+                <span class="quick-entry-label">每日推荐</span>
+            </a>
+            <router-link :to="{ path: '/PlaylistDetail', query: { global_collection_id: 'collection_3_25230245_24_0' } }"
+                class="quick-entry">
+                <span class="quick-entry-icon quick-entry-playlist">
+                    <i class="fas fa-list-ul"></i>
+                </span>
+                <span class="quick-entry-label">精选歌单</span>
+            </router-link>
+        </div>
+        <div v-if="!isMobile" class="recommendations" :class="`recommendations-${recommendCardStyle}`">
             <Transition name="recommend-style" mode="out-in">
                 <div v-if="recommendCardStyle === 'image'" key="image" class="recommendations-layout">
                     <div class="recommend-card gradient-background">
@@ -120,11 +148,35 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, onMounted, onUnmounted } from "vue";
 import { get } from '../../utils/request';
 
 const props = defineProps({
     playerControl: Object
+});
+
+// 移动端判定：<=768px 使用仿网易云的快捷入口布局
+const MOBILE_QUERY = '(max-width: 768px)';
+const isMobile = ref(typeof window !== 'undefined' && window.matchMedia(MOBILE_QUERY).matches);
+let mobileMediaQuery = null;
+
+const handleMobileChange = (event) => {
+    isMobile.value = event.matches;
+};
+
+const scrollToDaily = () => {
+    document.getElementById('daily-recommend')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+onMounted(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    mobileMediaQuery = window.matchMedia(MOBILE_QUERY);
+    isMobile.value = mobileMediaQuery.matches;
+    mobileMediaQuery.addEventListener('change', handleMobileChange);
+});
+
+onUnmounted(() => {
+    mobileMediaQuery?.removeEventListener('change', handleMobileChange);
 });
 
 const RECOMMEND_CARD_STYLE_KEY = 'homeRecommendCardStyle';
@@ -762,5 +814,76 @@ const playFM = async (event) => {
         font-size: 21px;
     }
 
+}
+/* ===== 移动端：仿网易云圆形快捷入口 ===== */
+.mobile-quick-entries {
+    display: flex;
+    gap: 4px;
+    padding: 6px 0 14px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+.quick-entry {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    width: 78px;
+    padding: 4px 0;
+    border: 0;
+    background: none;
+    color: var(--text-color);
+    font: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    scroll-snap-align: start;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.quick-entry-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    font-size: 21px;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+    transition: transform 0.18s ease;
+
+    .quick-entry:active & {
+        transform: scale(0.92);
+    }
+}
+
+.quick-entry-radio {
+    background: linear-gradient(135deg, #ff7ab8, #ff4d94);
+}
+
+.quick-entry-ranking {
+    background: linear-gradient(135deg, #ffb057, #ff8a3d);
+}
+
+.quick-entry-daily {
+    background: linear-gradient(135deg, #6fc3ff, #3d94ff);
+}
+
+.quick-entry-playlist {
+    background: linear-gradient(135deg, #9d8bff, #6f5bff);
+}
+
+.quick-entry-label {
+    font-size: 11px;
+    line-height: 1.2;
+    white-space: nowrap;
+    opacity: 0.86;
 }
 </style>

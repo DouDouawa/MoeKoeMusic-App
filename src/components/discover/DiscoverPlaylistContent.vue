@@ -221,6 +221,8 @@ onBeforeUnmount(() => {
     grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
     padding: 4px;
     overflow: hidden;
+    /* 同上：不显式置 0 时，格子的最小内容宽度会把容器的 100% 撑破 */
+    min-width: 0;
     background: var(--discover-main-bg);
     border-radius: 8px;
 
@@ -244,6 +246,8 @@ onBeforeUnmount(() => {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+    /* grid 子项默认 min-width:auto，内容超宽时会被列宽裁掉而不是换行 */
+    min-width: 0;
 }
 
 .main-category-button,
@@ -389,6 +393,29 @@ onBeforeUnmount(() => {
         p {
             line-height: 20px;
             max-height: 40px;
+        }
+    }
+}
+/* 320px 极窄屏：132px 最小列宽会把卡片挤成竖排文字，降到 108px 并压缩内文 */
+@media (max-width: 420px) {
+    .music-grid {
+        grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+        gap: 10px;
+    }
+
+    .music-card {
+        padding: 6px;
+    }
+
+    .music-info {
+        h3 {
+            font-size: 13px;
+        }
+
+        p {
+            font-size: 11px;
+            line-height: 18px;
+            max-height: 36px;
         }
     }
 }

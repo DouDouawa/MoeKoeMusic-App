@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue';
+import { isNativePlayback, nativePlayback } from '../../utils/nativePlayback';
 
 export default function usePlaybackMode(t, audio) {
   const playbackModes = ref([
@@ -16,14 +17,21 @@ export default function usePlaybackMode(t, audio) {
   // 初始化播放模式
   const initPlaybackMode = () => {
     const savedMode = localStorage.getItem('player_playback_mode');
-    currentPlaybackModeIndex.value = savedMode !== null ? parseInt(savedMode, 10) : 1;
-    audio.loop = currentPlaybackModeIndex.value === 2;
+    const parsed = Number.parseInt(savedMode, 10);
+    currentPlaybackModeIndex.value = Number.isInteger(parsed) && parsed >= 0 && parsed < 4 ? parsed : 1;
+    // Re-enter the cache-first source path at the end of each iteration.
+    audio.loop = false;
     console.log('[PlaybackMode] 初始化播放模式:', currentPlaybackModeIndex.value);
   };
   
   const setPlaybackMode = (index) => {
+    if (!Number.isInteger(index) || index < 0 || index >= playbackModes.value.length) return;
+    if (isNativePlayback()) {
+      void nativePlayback.setOptions({ mode: index }).catch(error => window.$message?.error?.(error.message));
+    }
     currentPlaybackModeIndex.value = index;
-    audio.loop = currentPlaybackModeIndex.value === 2;
+    // Re-enter the cache-first source path at the end of each iteration.
+    audio.loop = false;
     playedSongsStack.value = [];
     currentStackIndex.value = -1;
     localStorage.setItem('player_playback_mode', currentPlaybackModeIndex.value.toString());

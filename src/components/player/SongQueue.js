@@ -50,6 +50,11 @@ export default function useSongQueue(t, musicQueueStore, queueList = null) {
     };
 
     return {
+        cancelPending: () => {
+            onlineMusicQueue.cancelPendingOnline();
+            cloudMusicQueue.cancelPendingCloud();
+            localMusicQueue.cancelPendingLocal();
+        },
         currentSong,
         NextSong,
         addToNext,

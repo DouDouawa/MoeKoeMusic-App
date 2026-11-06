@@ -1,12 +1,20 @@
 <template>
-    <Header v-if="navigationMode === 'top'" />
-    <SidebarNavigation v-else />
+    <Header v-if="isMobile || navigationMode === 'top'" />
+    <div v-if="isMobile && drawerOpen" class="mobile-navigation-backdrop" @click="closeDrawer" />
+    <SidebarNavigation v-if="(!isMobile && navigationMode === 'side') || (isMobile && drawerOpen)"
+        :mobile-drawer="isMobile" @close="closeDrawer" />
     <main
         ref="mainScrollRef"
         class="app-main-scroll"
-        :class="{ 'side-navigation-main-content': navigationMode === 'side', collapsed: sidebarCollapsed }"
+        :class="{ 'side-navigation-main-content': !isMobile && navigationMode === 'side', collapsed: sidebarCollapsed }"
         @scroll="handleMainScroll"
     >
+        <div v-if="isMobile && (pullOffset > 0 || isRefreshing)"
+            class="pull-refresh-indicator"
+            :class="{ ready: isArmed, refreshing: isRefreshing }"
+            :style="{ transform: `translate(-50%, ${pullOffset}px)`, opacity: isRefreshing ? 1 : pullOpacity }">
+            <i class="fas" :class="isRefreshing ? 'fa-spinner fa-spin' : (isArmed ? 'fa-arrow-down' : 'fa-arrow-down')"></i>
+        </div>
         <div v-if="!isOnline" class="network-status">
             网络连接已断开
         </div>
@@ -20,14 +28,14 @@
                         <component
                             v-if="shouldCacheRoute(currentRoute)"
                             :is="Component"
-                            :key="getRouteCacheKey(currentRoute)"
+                            :key="`${getRouteCacheKey(currentRoute)}#${refreshKey}`"
                             :playerControl="playerControl"
                         />
                     </KeepAlive>
                     <component
                         v-if="!shouldCacheRoute(currentRoute)"
                         :is="Component"
-                        :key="currentRoute.fullPath"
+                        :key="`${currentRoute.fullPath}#${refreshKey}`"
                         :playerControl="playerControl"
                     />
                 </div>
@@ -46,6 +54,18 @@ import SidebarNavigation from "@/components/SidebarNavigation.vue";
 import PlayerControl from "@/components/PlayerControl.vue";
 import OnboardingGuide from "@/components/OnboardingGuide.vue";
 import { setTheme, applyColorTheme, applyCustomFont } from '../utils/utils';
+import { useMobileViewport } from '@/composables/useMobileViewport';
+import { useTabSwipe } from '@/composables/useTabSwipe';
+import { usePullToRefresh, pullProgress } from '@/composables/usePullToRefresh';
+import { useNavigationDrawer } from '@/composables/useNavigationDrawer';
+import { Capacitor } from '@capacitor/core';
+if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+    document.documentElement.classList.add('native-android');
+}
+
+const isMobile = useMobileViewport();
+// 抽屉状态放在共享模块里：返回手势在 App.vue 也要读它。
+const { drawerOpen, close: closeDrawer } = useNavigationDrawer();
 
 const route = useRoute();
 const playerControl = ref(null);
@@ -70,6 +90,16 @@ const pageCacheMax = cacheableRouteNames.size;
 const routeScrollPositions = new Map();
 let pageRouteAnimationFrame = null;
 
+// 一级导航页之间横向滑动切换；起手落在能横向滚动/拖拽的控件上时不生效。
+useTabSwipe(mainScrollRef);
+
+// 顶部下拉刷新：换一次 key 让当前页面重新挂载，各页面自己的 onMounted 会重新取数。
+const refreshKey = ref(0);
+const { pullOffset, isRefreshing, isArmed } = usePullToRefresh(mainScrollRef, () => {
+    refreshKey.value += 1;
+});
+const pullOpacity = computed(() => pullProgress(pullOffset.value).opacity);
+
 // 监听网络状态变化
 const handleNetworkChange = (online) => {
     isOnline.value = online;
@@ -87,7 +117,10 @@ const handleNetworkChange = (online) => {
 
 const handleOnline = () => handleNetworkChange(true);
 const handleOffline = () => handleNetworkChange(false);
-const loadNavigationMode = (settings = JSON.parse(localStorage.getItem('settings')) || {}) => {
+const readSettings = () => {
+    try { return JSON.parse(localStorage.getItem('settings')) || {}; } catch { return {}; }
+};
+const loadNavigationMode = (settings = readSettings()) => {
     navigationMode.value = settings.navigationMode === 'side' ? 'side' : 'top';
     playerBarLayout.value = settings.playerBarLayout === 'content' ? 'content' : 'full';
     applyPlayerBarLayout();
@@ -100,7 +133,7 @@ const handleSidebarCollapseChange = (event) => {
     applyPlayerBarLayout();
 };
 const applyPlayerBarLayout = () => {
-    const enabled = navigationMode.value === 'side' && playerBarLayout.value === 'content';
+    const enabled = !isMobile.value && navigationMode.value === 'side' && playerBarLayout.value === 'content';
     document.body.classList.toggle('player-bar-content-layout', enabled);
     document.documentElement.style.setProperty('--side-navigation-width', sidebarCollapsed.value ? '64px' : '226px');
 };
@@ -151,8 +184,11 @@ watch(routeViewKey, (to, from) => {
     restoreRouteScrollPosition(route);
 });
 
+watch(isMobile, () => { closeDrawer(); applyPlayerBarLayout(); });
+watch(() => route.fullPath, () => { closeDrawer(); });
+
 onMounted(() => {
-    const savedConfig = JSON.parse(localStorage.getItem('settings'));
+    const savedConfig = readSettings();
     if (savedConfig) {
         applyColorTheme(savedConfig['themeColor']);
         applyCustomFont(savedConfig.font || '');
@@ -169,8 +205,9 @@ onMounted(() => {
     window.addEventListener('settings-change', handleSettingsChange);
     window.addEventListener('sidebar-collapse-change', handleSidebarCollapseChange);
 
-    if (Notification.permission !== 'granted') {
-        Notification.requestPermission();
+    // WebView/离线环境可能没有 Notification；通知授权不是进入音乐库的前提。
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+        Promise.resolve(Notification.requestPermission()).catch(() => {});
     }
 
     replayPageRouteAnimation();
@@ -240,16 +277,25 @@ body {
     height: 0;
 }
 
-main {
+main.app-main-scroll {
     height: 100vh;
+    height: 100dvh;
     width: 100%;
     margin: 0;
     padding-top: 80px;
     padding-bottom: 150px;
     box-sizing: border-box;
     overflow-y: auto;
+    /* 保留桌面端的横向裁剪作为兜底；手机端各页已改为真实可达的窄屏布局 */
     overflow-x: hidden;
     overscroll-behavior: contain;
+}
+
+/* 移动端顶栏压缩为单行，内容区上边距同步收窄，避免顶部留白 */
+@media (max-width: 768px) {
+    main {
+        padding-top: 58px;
+    }
 }
 
 .main-content-shell {
@@ -310,6 +356,35 @@ a {
     z-index: 1000;
 }
 
+/* 下拉刷新指示器：跟手位移，松手后回到原位 */
+.pull-refresh-indicator {
+    position: absolute;
+    top: calc(var(--app-header-height) + var(--app-safe-top) - 44px);
+    left: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--app-surface, #fff);
+    color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    font-size: 13px;
+    pointer-events: none;
+    z-index: 4;
+    transition: opacity 0.15s ease;
+}
+
+.pull-refresh-indicator.ready {
+    color: var(--color-primary);
+}
+
+.pull-refresh-indicator.refreshing {
+    top: calc(var(--app-header-height) + var(--app-safe-top) - 4px);
+    transition: top 0.2s ease, opacity 0.15s ease;
+}
+
 body.player-bar-content-layout .side-navigation {
     bottom: 0;
 }
@@ -321,5 +396,39 @@ body:not(.player-bar-content-layout) .side-navigation {
 body.player-bar-content-layout .player-container {
     left: var(--side-navigation-width);
     width: calc(100% - var(--side-navigation-width));
+}
+/* Insets are CSS-only on browsers; Android already insets the WebView itself. */
+:root {
+    --app-header-height: 80px;
+    --app-player-height: 80px;
+    --app-safe-top: env(safe-area-inset-top, 0px);
+    --app-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --app-surface: #fff;
+    /* 粘性头的 top 基线。桌面端滚动容器没有顶部内边距，需要自己让开固定顶栏；
+       移动端 .app-main-scroll 已经用 padding-top 让出了同样的距离，再让一次会重叠。 */
+    --app-sticky-base: var(--app-header-height);
+}
+.dark { --app-surface: #202020; }
+.mobile-more-button { display: none; }
+.mobile-navigation-backdrop { position: fixed; inset: 0; background: #0007; z-index: 1199; }
+@media (max-width: 768px) {
+    :root { --app-header-height: 56px; --app-player-height: 76px; --app-sticky-base: 0px; }
+    main.app-main-scroll {
+        width: 100%; margin: 0;
+        padding-top: calc(var(--app-header-height) + var(--app-safe-top));
+        padding-bottom: calc(var(--app-player-height) + var(--app-safe-bottom) + 20px);
+        scroll-padding-bottom: calc(var(--app-player-height) + var(--app-safe-bottom) + 20px);
+    }
+    .main-content-shell, .page-route-view { min-width: 0; }
+    .network-status { position: sticky; top: 0; box-sizing: border-box; z-index: 5; }
+    body.player-bar-content-layout .player-container { left: 0; width: 100%; }
+    .mobile-more-button {
+        display: inline-flex; align-items: center; justify-content: center;
+        flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: 0;
+        border-radius: 10px; background: transparent; color: inherit; cursor: pointer;
+    }
+    .mobile-more-button:active { background: var(--color-secondary-bg-for-transparent); }
+    input, textarea, select { font-size: 16px; }
+    button, a, [role='button'] { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 }
 </style>

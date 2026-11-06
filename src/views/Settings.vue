@@ -1,8 +1,14 @@
 <template>
     <div class="settings-page">
-        <div class="settings-sidebar">
+        <!-- 手机端：左侧选项栏默认隐藏，只留一个书签式手柄，点击从左侧滑出 -->
+        <button v-show="!isSidebarOpen" type="button" class="settings-sidebar-handle" :aria-label="$t('she-zhi')"
+            @click="isSidebarOpen = true">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div v-if="isSidebarOpen" class="settings-sidebar-backdrop" @click="isSidebarOpen = false"></div>
+        <div class="settings-sidebar" :class="{ open: isSidebarOpen }">
             <div v-for="(section, sectionIndex) in settingSections" :key="sectionIndex" class="sidebar-item"
-                :class="{ active: activeTab === sectionIndex }" @click="activeTab = sectionIndex">
+                :class="{ active: activeTab === sectionIndex }" @click="selectSection(sectionIndex)">
                 <i :class="section.icon"></i>
                 <span>{{ section.title }}</span>
             </div>
@@ -29,6 +35,10 @@
                                 @click.stop="openHelpLink(item.helpLink)">
                                 <i class="fas fa-question-circle"></i>
                             </button>
+                        </div>
+                        <div v-if="item.helpText" class="setting-card-desc">{{ item.helpText }}</div>
+                        <div v-if="item.key === 'audioCacheLimitMB'" class="setting-card-desc cache-usage-line">
+                            {{ t('huan-cun-yi-yong-kong-jian') }}: {{ cacheUsageText }}
                         </div>
                         <div class="setting-card-value">
                             <template v-if="isToggleItem(item)">
@@ -73,12 +83,35 @@
                 <h3>{{ getSettingItem(selectionType)?.selectionTitle }}</h3>
                 <input v-if="isFontSelection()" class="font-search" placeholder="搜索字体..."
                     v-model="fontSearch" />
-                <ul v-else-if="!isToggleItem(getSettingItem(selectionType)) && isPreventOpenSelectionItem(getSettingItem(selectionType))">
+                <ul v-else-if="!isToggleItem(getSettingItem(selectionType)) && isPreventOpenSelectionItem(getSettingItem(selectionType)) && !isCustomPanel(selectionType)">
                     <li v-for="option in getSettingItem(selectionType)?.options || []" :key="option.value"
                         @click="selectOption(option)">
                         {{ option.displayText }}
                     </li>
                 </ul>
+
+                <div v-if="selectionType === 'audioCacheLimitMB'" class="cache-limit-panel">
+                    <p class="cache-limit-current">
+                        {{ t('huan-cun-yi-yong-kong-jian') }}: {{ cacheUsageText }}
+                    </p>
+                    <div class="cache-limit-presets">
+                        <button v-for="option in getSettingItem('audioCacheLimitMB')?.options || []" :key="option.value"
+                            type="button" :class="{ active: String(cacheLimitForm.mb) === option.value }"
+                            @click="cacheLimitForm.mb = option.value">
+                            {{ option.displayText }}
+                        </button>
+                    </div>
+                    <div class="api-setting-item">
+                        <label>{{ t('huan-cun-zi-ding-yi') }}</label>
+                        <input type="number" inputmode="numeric" min="1" step="1" class="api-input"
+                            v-model="cacheLimitForm.mb" :placeholder="'500'" @keyup.enter="saveCacheLimit" />
+                    </div>
+                    <p v-if="cacheLimitForm.error" class="cache-limit-error">{{ cacheLimitForm.error }}</p>
+                    <p class="cache-limit-hint">{{ t('huan-cun-rong-liang-shuo-ming') }}</p>
+                    <div class="proxy-actions">
+                        <button class="primary" @click="saveCacheLimit">{{ t('bao-cun-she-zhi-an-niu') }}</button>
+                    </div>
+                </div>
 
                 <ul v-if="selectionType === 'audioOutputDevice'">
                     <li v-if="audioOutputDevicesLoading">正在获取设备列表...</li>
@@ -267,6 +300,7 @@ import { applyCustomFont, requestMicrophonePermission } from '../utils/utils';
 import { DEFAULT_API_BASE_URL, validateApiBaseUrl, testApiBaseUrl as testApiBaseUrlRequest } from '@/utils/apiBaseUrl';
 import { useSettingsConfig } from '@/config/settings';
 import { ONBOARDING_GUIDE_EVENT } from '@/config/onboardingGuide';
+import { getCacheStats } from '@/utils/audioCache';
 
 const MoeAuth = MoeAuthStore();
 const { t } = useI18n();
@@ -274,6 +308,12 @@ const { proxy } = getCurrentInstance();
 const appVersion = ref('');
 const platform = ref('');
 const activeTab = ref(0);
+// 手机端左侧选项栏默认收起，由书签手柄唤出；选中分类或点击空白处收起
+const isSidebarOpen = ref(false);
+const selectSection = (index) => {
+    activeTab.value = index;
+    isSidebarOpen.value = false;
+};
 const defaultApiBaseUrl = DEFAULT_API_BASE_URL;
 
 /** @param {HTMLButtonElement | null | undefined} target */
@@ -321,6 +361,51 @@ const selectedSettings = ref(createSelectedSettings(settingSections.value));
 const isSelectionOpen = ref(false);
 const currentHelpLink = ref('');
 const selectionType = ref('');
+// 音频缓存容量：预设 + 自定义正数 MB，统计常驻卡片
+const cacheStats = ref({ count: 0, totalSize: 0, limitBytes: 0, pendingBytes: 0 });
+const cacheLimitForm = reactive({ mb: '500', error: '' });
+const formatSizeMb = (bytes) => `${((Number(bytes) || 0) / 1024 / 1024).toFixed(1)} MB`;
+const cacheUsageText = computed(() => {
+    const stats = cacheStats.value || {};
+    if (stats.unavailable) return t('huan-cun-bu-ke-yong');
+    const pending = Number(stats.pendingBytes) > 0
+        ? ` · ${t('huan-cun-dai-shi-fang')} ${formatSizeMb(stats.pendingBytes)}` : '';
+    return `${formatSizeMb(stats.totalSize)} / ${formatSizeMb(stats.limitBytes)} · ${stats.count || 0} ${t('shou')}${pending}`;
+});
+const isCustomPanel = (type = selectionType.value) => type === 'audioCacheLimitMB';
+const refreshCacheStats = async () => {
+    try {
+        const stats = await getCacheStats();
+        if (stats) cacheStats.value = stats;
+    } catch {
+        // 缓存不可用时保留上一次的统计值，不阻断设置页
+    }
+};
+const handleCacheChange = (event) => {
+    // 缓存模块已附统计时直接用，避免完成/淘汰后再查一次
+    if (event?.detail?.stats) cacheStats.value = event.detail.stats;
+    else void refreshCacheStats();
+};
+const readCacheLimitMb = (value) => {
+    const mb = Number(value);
+    return Number.isFinite(mb) && mb > 0 ? String(Math.floor(mb)) : '500';
+};
+const saveCacheLimit = () => {
+    const raw = String(cacheLimitForm.mb ?? '').trim();
+    const mb = Number(raw);
+    // 非法值不写入，避免把 localStorage 里的容量改成 NaN 或被当成默认值
+    if (!/^\d+$/.test(raw) || !Number.isFinite(mb) || mb <= 0) {
+        cacheLimitForm.error = t('huan-cun-rong-liang-wu-xiao');
+        return;
+    }
+    cacheLimitForm.error = '';
+    const value = String(Math.floor(mb));
+    selectedSettings.value.audioCacheLimitMB = { displayText: `${value} MB`, value };
+    saveSettings();
+    markRefreshHint('audioCacheLimitMB');
+    void refreshCacheStats();
+    closeSelection();
+};
 const fontOptions = ref([]);
 const fontOptionsLoading = ref(false);
 const fontSearch = ref('');
@@ -451,6 +536,12 @@ const openSelection = (type, helpLink) => {
 
     if (type === 'audioOutputDevice') {
         void loadAudioOutputDevices();
+    }
+
+    if (isCustomPanel(type)) {
+        cacheLimitForm.mb = readCacheLimitMb(selectedSettings.value.audioCacheLimitMB?.value);
+        cacheLimitForm.error = '';
+        void refreshCacheStats();
     }
 };
 
@@ -668,7 +759,16 @@ const closeSelection = () => {
 };
 
 onMounted(() => {
-    const savedSettings = JSON.parse(localStorage.getItem('settings'));
+    let savedSettings = null;
+    try {
+        // 损坏的 JSON 不能让整个设置页打不开
+        const parsed = JSON.parse(localStorage.getItem('settings') || 'null');
+        savedSettings = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+    } catch {
+        savedSettings = null;
+    }
+    window.addEventListener('audio-cache-change', handleCacheChange);
+    void refreshCacheStats();
 
     if (savedSettings) {
         if (savedSettings.apiBaseUrlMode === undefined) {
@@ -705,6 +805,19 @@ onMounted(() => {
             if (key === 'dpiScale') {
                 const value = savedSettings[key] || '1.0';
                 selectedSettings.value[key] = { displayText: value, value: value };
+                continue;
+            }
+            if (key === 'audioCacheEnabled') {
+                // 历史数据可能是布尔值，缓存的开启语义与显示必须一致
+                const enabled = ![false, 'off', 'false', 0, '0'].includes(savedSettings[key]);
+                const option = settingItem?.options?.find(item => item.value === (enabled ? 'on' : 'off'));
+                if (option) selectedSettings.value[key] = { ...option };
+                continue;
+            }
+            if (key === 'audioCacheLimitMB') {
+                // 自定义容量不在预设列表里，必须按数值还原显示
+                const value = readCacheLimitMb(savedSettings[key]);
+                selectedSettings.value[key] = { displayText: `${value} MB`, value };
                 continue;
             }
             if (isFontSelection(key)) {
@@ -1128,6 +1241,7 @@ const saveShortcuts = () => {
 
 onUnmounted(() => {
     window.removeEventListener('keydown', recordShortcut);
+    window.removeEventListener('audio-cache-change', handleCacheChange);
 });
 
 const clearShortcut = (key) => {
@@ -1333,6 +1447,68 @@ $shadow-medium: rgba(0, 0, 0, 0.18);
         min-width: 0;
         word-break: break-word;
     }
+}
+
+.setting-card-desc {
+    margin: 2px 0 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-color-secondary, #888);
+    opacity: 0.85;
+}
+
+.cache-usage-line {
+    font-variant-numeric: tabular-nums;
+    color: var(--primary-color);
+    opacity: 0.9;
+}
+
+.cache-limit-panel {
+    padding: 4px 0 8px;
+}
+
+.cache-limit-current {
+    margin: 0 0 12px;
+    font-size: 13px;
+    color: var(--text-color-secondary, #888);
+    word-break: break-word;
+}
+
+.cache-limit-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+
+    button {
+        flex: 1 1 auto;
+        min-width: 84px;
+        min-height: 40px;
+        padding: 8px 12px;
+        border: 1px solid var(--secondary-color);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text-color);
+        cursor: pointer;
+
+        &.active {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            background-color: rgba(var(--primary-color-rgb), 0.12);
+        }
+    }
+}
+
+.cache-limit-hint {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: var(--text-color-secondary, #888);
+}
+
+.cache-limit-error {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: #f56c6c;
 }
 
 .card-help-link {
@@ -1860,6 +2036,92 @@ $shadow-medium: rgba(0, 0, 0, 0.18);
         &.error {
             color: #e53935;
         }
+    }
+}
+
+// 手机端：左侧选项栏占 220px，内容只剩 155px 无法阅读。
+// 改为抽屉式：默认收起，右侧留一个书签式手柄唤出；选中分类或点空白处收起。
+// 播放栏 z-index 为 98，抽屉需要盖在其之上。
+.settings-sidebar-handle {
+    display: none;
+}
+
+@media (max-width: 767px) {
+    .settings-page {
+        height: auto;
+        min-height: var(--settings-page-height, calc(100vh - 160px));
+        overflow: visible;
+    }
+
+    // 书签式手柄：贴在左边缘的竖条
+    .settings-sidebar-handle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        left: 0;
+        /* 下移到第一个分组标题下方：贴太高会压住「界面」这类小节标题 */
+        top: 150px;
+        z-index: 120;
+        /* 32px 宽 + 内容区左侧 44px 内边距，手柄只占自己的轨道不压内容；
+           高度 64px 满足触控下限。 */
+        width: 32px;
+        height: 64px;
+        padding: 0;
+        border: none;
+        border-radius: 0 12px 12px 0;
+        background-color: $primary;
+        color: #fff;
+        cursor: pointer;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.18);
+
+        i {
+            font-size: 13px;
+        }
+    }
+
+    .settings-sidebar-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 130;
+        background-color: rgba(0, 0, 0, 0.4);
+    }
+
+    .settings-sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 140;
+        width: 240px;
+        max-width: 82vw;
+        padding: 70px 0 20px;
+        overflow-y: auto;
+        background-color: var(--background-color);
+        box-shadow: 0 0 24px rgba(0, 0, 0, 0.24);
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+
+        &.open {
+            transform: translateX(0);
+        }
+    }
+
+    .settings-content {
+        /* 左侧留出把手的轨道，否则 fixed 的把手会压在卡片上（滚动时压到哪张都不一定） */
+        padding: 14px 14px 14px 44px;
+    }
+
+    .setting-section h3 {
+        font-size: 18px;
+        margin-bottom: 14px;
+    }
+}
+
+// 桌面端若仍残留打开状态，兜底隐藏遮罩（抽屉样式本身只在手机端生效）
+@media (min-width: 768px) {
+    .settings-sidebar-backdrop {
+        display: none;
     }
 }
 </style>

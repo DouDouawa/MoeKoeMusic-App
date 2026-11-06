@@ -130,6 +130,7 @@ const readLocalSongCover = async (file) => {
 };
 
 export default function useLocalMusicQueue(t, musicQueueStore, currentSong, timeoutId) {
+    let requestId = 0;
     const restoreLocalSongCover = async (localItem) => {
         const localHash = getLocalSongHash(localItem);
         if (!localHash) return '';
@@ -142,6 +143,7 @@ export default function useLocalMusicQueue(t, musicQueueStore, currentSong, time
 
     // 添加本地音乐到队列并播放
     const addLocalMusicToQueue = async (localItem, isReset = true) => {
+    const token = ++requestId;
 
         const currentSongHash = currentSong.value.hash;
         const localHash = getLocalSongHash(localItem);
@@ -162,6 +164,7 @@ export default function useLocalMusicQueue(t, musicQueueStore, currentSong, time
                 ? getLocalSongCover(localItem)
                 : await readLocalSongCover(localFile);
             
+            if (token !== requestId) return { stale: true };
             // 设置当前歌曲信息
             currentSong.value.author = localItem.author || '未知艺术家';
             currentSong.value.name = localItem.displayName || localItem.name;
@@ -215,6 +218,7 @@ export default function useLocalMusicQueue(t, musicQueueStore, currentSong, time
             // 返回歌曲对象
             return { song };
         } catch (error) {
+        if (typeof token !== 'undefined' && token !== requestId) return { stale: true };
             console.error('[SongQueue] 获取本地音乐地址出错:', error);
             currentSong.value.author = currentSong.value.name = '获取本地音乐失败';
             // if (musicQueueStore.queue.length === 0) return { error: true };
@@ -281,6 +285,7 @@ export default function useLocalMusicQueue(t, musicQueueStore, currentSong, time
     };
 
     return {
+    cancelPendingLocal: () => { requestId += 1; },
         addLocalMusicToQueue,
         addLocalPlaylistToQueue,
         restoreLocalSongCover

@@ -78,10 +78,40 @@
 
         <!-- 分类导航 -->
         <div class="category-tabs">
-            <button v-for="(tab, index) in categories" :key="index" :class="{ 'active': selectedCategory === index }"
-                @click="selectCategory(index)">
-                {{ tab }}
-            </button>
+            <!-- 手机端：只保留三个（我创建的歌单 / 我关注的歌手 / 其他选项下拉） -->
+            <template v-if="isMobile">
+                <button :class="{ 'active': selectedCategory === MOBILE_PRIMARY_CATEGORIES[0] }"
+                    @click="selectCategory(MOBILE_PRIMARY_CATEGORIES[0])">
+                    {{ categories[MOBILE_PRIMARY_CATEGORIES[0]] }}
+                </button>
+                <button :class="{ 'active': selectedCategory === MOBILE_PRIMARY_CATEGORIES[1] }"
+                    @click="selectCategory(MOBILE_PRIMARY_CATEGORIES[1])">
+                    {{ categories[MOBILE_PRIMARY_CATEGORIES[1]] }}
+                </button>
+                <div class="category-more">
+                    <button class="category-more-toggle" :class="{ 'active': isOtherCategoryActive }"
+                        @click.stop="toggleCategoryMenu">
+                        <span>{{ isOtherCategoryActive ? categories[selectedCategory] : $t('qi-ta-xuan-xiang') }}</span>
+                        <i class="fas fa-angle-down" :class="{ 'rotated': categoryMenuOpen }"></i>
+                    </button>
+                    <transition name="category-more">
+                        <div v-if="categoryMenuOpen" class="category-more-menu" @click.stop>
+                            <button v-for="index in otherCategoryIndexes" :key="index" type="button"
+                                :class="{ 'active': selectedCategory === index }"
+                                @click.stop="selectCategory(index)">
+                                {{ categories[index] }}
+                            </button>
+                        </div>
+                    </transition>
+                </div>
+            </template>
+            <!-- 桌面端：全量平铺，行为不变 -->
+            <template v-else>
+                <button v-for="(tab, index) in categories" :key="index" :class="{ 'active': selectedCategory === index }"
+                    @click="selectCategory(index)">
+                    {{ tab }}
+                </button>
+            </template>
         </div>
 
         <!-- 音乐卡片网格（显示歌单或关注的歌手） -->
@@ -167,8 +197,8 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue';
-import { get } from '../utils/request';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { get, post } from '../utils/request';
 import { getProfileBgColor } from '../utils/utils';
 import { MoeAuthStore } from '../stores/store';
 import { useListenTimeStore } from '@/stores/listenTime';
@@ -193,6 +223,34 @@ const userVip = ref({});
 const userDetail = ref({}); // 新增：用户详细信息
 const categories = ref([t('wo-chuang-jian-de-ge-dan'), t('wo-shou-cang-de-ge-dan'), t('wo-shou-cang-de-zhuan-ji'), t('wo-guan-zhu-de-ge-shou'), t('wo-guan-zhu-de-hao-you')]);
 const selectedCategory = ref(0);
+
+// 手机端分类页签只保留三个：我创建的歌单、我关注的歌手，其余收进「其他选项」下拉。
+// 桌面端仍按 categories 全量平铺。
+// 必须和下方 @media (max-width: 768px) 保持同一个值，否则正好 768px 时
+// CSS 按手机布局渲染、这里却走桌面分支，页签会出现重排
+const MOBILE_QUERY = '(max-width: 768px)';
+const isMobile = ref(typeof window !== 'undefined' && window.matchMedia(MOBILE_QUERY).matches);
+const MOBILE_PRIMARY_CATEGORIES = [0, 3];
+const otherCategoryIndexes = computed(() =>
+    categories.value.map((_, index) => index).filter(index => !MOBILE_PRIMARY_CATEGORIES.includes(index))
+);
+const isOtherCategoryActive = computed(() => otherCategoryIndexes.value.includes(selectedCategory.value));
+const categoryMenuOpen = ref(false);
+const toggleCategoryMenu = () => {
+    categoryMenuOpen.value = !categoryMenuOpen.value;
+};
+// 点击「其他选项」外部时收起下拉
+const handleCategoryMenuOutside = (event) => {
+    if (!categoryMenuOpen.value) return;
+    if (event.target?.closest?.('.category-more')) return;
+    categoryMenuOpen.value = false;
+};
+let mobileQuery = null;
+const onMobileQueryChange = (e) => {
+    isMobile.value = e.matches;
+    // 切回桌面端时收起下拉，避免残留浮层
+    if (!e.matches) categoryMenuOpen.value = false;
+};
 const isLoading = ref(true);
 const LISTEN_SECTION_HIDDEN_KEY = 'library:listen-section-hidden';
 const DEFAULT_PROFILE_BG_COLOR = 'rgb(44, 32, 34)';
@@ -219,6 +277,7 @@ const userGenderTitle = computed(() => {
 
 const selectCategory = (index) => {
     selectedCategory.value = index;
+    categoryMenuOpen.value = false;
     // router.replace({ path: '/library', query: { category: index } });
 };
 
@@ -266,10 +325,21 @@ const props = defineProps({
 });
 
 onMounted(() => {
+    mobileQuery = window.matchMedia(MOBILE_QUERY);
+    mobileQuery.addEventListener('change', onMobileQueryChange);
+    document.addEventListener('click', handleCategoryMenuOutside);
     if (MoeAuth.isAuthenticated) {
         user.value = MoeAuth.UserInfo;
         // 获取用户vip信息
         getVipInfo();
+    }
+});
+
+onUnmounted(() => {
+    document.removeEventListener('click', handleCategoryMenuOutside);
+    if (mobileQuery) {
+        mobileQuery.removeEventListener('change', onMobileQueryChange);
+        mobileQuery = null;
     }
 });
 const getUserDetails = () => {
@@ -387,10 +457,13 @@ const createPlaylist = async () => {
     const result = await window.$modal.prompt(t('qing-shu-ru-xin-de-ge-dan-ming-cheng'), '');
     if (result) {
         try {
-            const playlistResponse = await get('/playlist/add', { name: result, list_create_userid: user.value.userid });
+            const playlistResponse = await post('/playlist/add', { name: result, list_create_userid: user.value.userid, type: 0 });
             if (playlistResponse.status === 1) {
                 localStorage.setItem('t', Date.now());
                 getplaylist()
+            } else {
+                window.$modal.alert(`${t('chuang-jian-shi-bai')} (error_code: ${playlistResponse.error_code ?? 'undefined'})`);
+                console.error('创建歌单失败:', playlistResponse);
             }
         } catch (error) {
             window.$modal.alert(t('chuang-jian-shi-bai'));
@@ -1063,4 +1136,236 @@ const addAllSongsToQueue = () => {
     text-align: center;
     margin-left: 60px;
 }
+
+// 手机视口：资料头部原本是「头像 + 文字」横排，可用宽只有 ~184px，
+// 昵称 28px 会被压成三四行、四个统计项和三个操作按钮挤成一团。
+// 这里改成头像在上、信息在下，并让各信息行可换行、按钮不拆字。
+@media (max-width: 768px) {
+    .library-page {
+        padding: 12px;
+    }
+
+    .profile-header {
+        min-height: 0;
+        padding: 14px;
+        align-items: flex-start;
+    }
+
+    .profile-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .profile-pic {
+        width: 64px;
+        height: 64px;
+        top: 0;
+        margin-bottom: 0;
+        border-width: 2px;
+    }
+
+    .user-details {
+        width: 100%;
+        height: auto;
+        justify-content: flex-start;
+    }
+
+    .user-name-row {
+        flex-wrap: wrap;
+        gap: 4px 8px;
+    }
+
+    .user-name {
+        font-size: 20px;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .user-level {
+        width: auto;
+        margin-left: 0;
+        font-size: 12px;
+    }
+
+    .user-vip-icon {
+        height: 18px;
+        margin-left: 0;
+    }
+
+    .user-signature {
+        font-size: 12px;
+        margin-bottom: 6px;
+    }
+
+    .user-stats {
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 12px;
+        margin-bottom: 6px;
+    }
+
+    .stat-value {
+        font-size: 15px;
+    }
+
+    .user-meta {
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .user-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 0;
+    }
+
+    // 用户卡片底部这三个是次要操作，文字不拆行，
+    // 且不能用页签那套 40px：原规则在 content-box 下会变成
+    // 40 + padding8 + border2 = 50px 高的方块，把卡片下沿压得很重，
+    // 这里显式用 border-box 收成紧凑胶囊。
+    .action-button {
+        white-space: nowrap;
+        box-sizing: border-box;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 34px;
+        min-height: 0;
+        padding: 0 12px;
+    }
+
+    .section-title {
+        font-size: 22px;
+    }
+
+    // 分类页签固定三个：两个主分类 +「其他选项」下拉，不再横向滑动
+    .category-tabs {
+        gap: 8px;
+        margin-bottom: 16px;
+
+        >button,
+        .category-more {
+            flex: 1 1 0;
+            min-width: 0;
+        }
+
+        button {
+            padding: 8px 10px;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    }
+
+    .category-more {
+        position: relative;
+
+        .category-more-toggle {
+            width: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+
+            i {
+                flex-shrink: 0;
+                font-size: 12px;
+                transition: transform 0.18s ease;
+
+                &.rotated {
+                    transform: rotate(180deg);
+                }
+            }
+        }
+
+        // 浮层不参与页签等分宽度
+        .category-more-menu {
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            z-index: 20;
+            min-width: 148px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 6px;
+            border-radius: 12px;
+            background-color: var(--background-color);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+
+            button {
+                width: 100%;
+                text-align: left;
+                padding: 8px 10px;
+                border-radius: 8px;
+                background: transparent;
+
+                &:hover {
+                    transform: none;
+                }
+            }
+        }
+    }
+
+    .category-more-enter-active,
+    .category-more-leave-active {
+        transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    .category-more-enter-from,
+    .category-more-leave-to {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    .music-grid {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 12px;
+    }
+
+    /* 触屏没有 hover，只有 :hover 才可见的入口要显式放出来：
+       收藏区关闭按钮默认 color:transparent，播放图标同理 */
+    .favorite-close-button {
+        color: #8a8a8a !important;
+        min-width: 44px;
+        min-height: 44px;
+        justify-content: center;
+    }
+
+    .song-play-icon {
+        opacity: 1;
+        transform: translateY(-50%) scale(1);
+    }
+
+    .category-tabs button,
+    .category-more-toggle {
+        min-height: 40px;
+    }
+
+    .playlist-name,
+    .playlist-description,
+    .song-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .empty-description {
+        margin-left: 0;
+        padding: 0 16px;
+    }
+}
+
+/* 横屏低高度：资料头部不再吃掉整屏 */
+@media (max-height: 480px) and (max-width: 900px) {
+    .profile-header {
+        min-height: 0;
+        padding: 12px;
+    }
+}
+
 </style>

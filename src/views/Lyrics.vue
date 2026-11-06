@@ -533,7 +533,7 @@ const startHoverPolling = () => {
     hoverPollingTimer = setInterval(pollHoverState, 120)
 }
 
-window.electron.ipcRenderer.on('lyrics-data', (_event, data) => {
+window.electron?.ipcRenderer?.on('lyrics-data', (_event, data) => {
     isPlaying.value = data.playing
     if (data.currentTime < 1) {
         lyrics.value = processLyricsData(data.lyricsData);
@@ -561,7 +561,7 @@ const processLyricsData = (lyricsData) => {
     });
 }
 
-window.electron.ipcRenderer.on('playing-status', (_event, playing) => {
+window.electron?.ipcRenderer?.on('playing-status', (_event, playing) => {
     isPlaying.value = !!playing
 })
 

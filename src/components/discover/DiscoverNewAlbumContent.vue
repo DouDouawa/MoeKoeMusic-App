@@ -270,4 +270,27 @@ useActivatedWatch(() => route.query.albumType, async (albumType) => {
         }
     }
 }
+/* 320px 极窄屏：132px 最小列宽会把卡片挤成竖排文字，降到 108px 并压缩内文 */
+@media (max-width: 420px) {
+    .music-grid {
+        grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+        gap: 10px;
+    }
+
+    .music-card {
+        padding: 6px;
+    }
+
+    .music-info {
+        h3 {
+            font-size: 13px;
+        }
+
+        p {
+            font-size: 11px;
+            line-height: 18px;
+            max-height: 36px;
+        }
+    }
+}
 </style>

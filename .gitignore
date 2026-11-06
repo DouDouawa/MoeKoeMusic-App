@@ -35,3 +35,22 @@ package-lock.json
 vite.config.js*
 
 plugins/extensions/*
+
+# --- Android / Capacitor 构建产物 ---
+# 只要源码结构，构建中间物和前端打包副本都不入库
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/.idea/
+# Vite 产物被同步到这里的副本，由构建脚本重新生成
+android/app/src/main/assets/public/
+# 签名与密钥，绝不能进仓库
+*.jks
+*.keystore
+*.apk
+*.aab
+
+# --- 本地产物 / 工具临时目录 ---
+.narrafork/
+MoeKoe-Music-debug.apk

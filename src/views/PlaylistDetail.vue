@@ -90,41 +90,47 @@
             <div class="track-list-header" :style="listHeaderStyle">
                 <h2 class="track-list-title" :style="listTitleStyle"><span>{{ $t('ge-qu-lie-biao') }}</span> ( {{ displayTrackCount }} )</h2>
                 <div class="track-list-actions">
-                    <div class="batch-action-container">
-                        <button class="batch-action-btn" @click="toggleBatchSelection"
-                            :class="{ 'active': batchSelectionMode }">
-                            <input type="checkbox" v-model="batchSelectionMode" /> 批量操作
-                            <span v-if="selectedTracks.length > 0" class="selected-count">{{ selectedTracks.length
-                                }}</span>
-                        </button>
-                        <div v-if="batchSelectionMode && isBatchMenuVisible && selectedTracks.length > 0"
-                            class="batch-actions-menu">
-                            <ul>
-                                <li @click="appendSelectedToQueue"><i class="fas fa-list"></i> 添加到播放列表 </li>
-                                <li @click="addSelectedToOtherPlaylist" v-if="MoeAuth.UserInfo?.userid"><i
-                                        class="fas fa-folder-plus"></i> 添加到其他歌单</li>
-                                <li v-if="!isArtist && detail.list_create_userid == MoeAuth.UserInfo?.userid && route.query.listid"
-                                    @click="removeSelectedFromPlaylist"><i class="fas fa-trash-alt"></i> 取消收藏</li>
-                            </ul>
+                    <div class="actions-inline" :class="{ 'mobile-open': mobileActionsOpen }">
+                        <div class="batch-action-container">
+                            <button class="batch-action-btn" @click="toggleBatchSelection"
+                                :class="{ 'active': batchSelectionMode }">
+                                <input type="checkbox" v-model="batchSelectionMode" /> 批量操作
+                                <span v-if="selectedTracks.length > 0" class="selected-count">{{ selectedTracks.length
+                                    }}</span>
+                            </button>
+                            <div v-if="batchSelectionMode && isBatchMenuVisible && selectedTracks.length > 0"
+                                class="batch-actions-menu">
+                                <ul>
+                                    <li @click="appendSelectedToQueue"><i class="fas fa-list"></i> 添加到播放列表 </li>
+                                    <li @click="addSelectedToOtherPlaylist" v-if="MoeAuth.UserInfo?.userid"><i
+                                            class="fas fa-folder-plus"></i> 添加到其他歌单</li>
+                                    <li v-if="!isArtist && detail.list_create_userid == MoeAuth.UserInfo?.userid && route.query.listid"
+                                        @click="removeSelectedFromPlaylist"><i class="fas fa-trash-alt"></i> 取消收藏</li>
+                                </ul>
+                            </div>
                         </div>
-                    </div>
-                    <!-- 歌手歌曲排序选择 -->
-                    <div v-if="isArtist" class="sort-selector">
-                        <button class="sort-btn" :class="{ 'active': artistSortType === 'hot' }"
-                            @click="changeArtistSort('hot')">
-                            热门
+                        <!-- 歌手歌曲排序选择 -->
+                        <div v-if="isArtist" class="sort-selector">
+                            <button class="sort-btn" :class="{ 'active': artistSortType === 'hot' }"
+                                @click="changeArtistSort('hot')">
+                                热门
+                            </button>
+                            <button class="sort-btn" :class="{ 'active': artistSortType === 'new' }"
+                                @click="changeArtistSort('new')">
+                                最新
+                            </button>
+                        </div>
+                        <button class="view-mode-btn" @click="toggleViewMode"
+                            :title="viewMode === 'list' ? '切换到网格视图' : '切换到列表视图'">
+                            <i class="fas" :class="viewMode === 'list' ? 'fa-th' : 'fa-list'"></i>
                         </button>
-                        <button class="sort-btn" :class="{ 'active': artistSortType === 'new' }"
-                            @click="changeArtistSort('new')">
-                            最新
-                        </button>
+                        <input type="text" v-model="searchQuery" @keyup.enter="searchTracks"
+                            :placeholder="t('sou-suo-ge-qu')" class="search-input" />
                     </div>
-                    <button class="view-mode-btn" @click="toggleViewMode"
-                        :title="viewMode === 'list' ? '切换到网格视图' : '切换到列表视图'">
-                        <i class="fas" :class="viewMode === 'list' ? 'fa-th' : 'fa-list'"></i>
+                    <button class="mobile-more-btn" :class="{ 'active': mobileActionsOpen }"
+                        @click.stop="toggleMobileActions" title="更多操作">
+                        <i class="fas fa-ellipsis-h"></i>
                     </button>
-                    <input type="text" v-model="searchQuery" @keyup.enter="searchTracks"
-                        :placeholder="t('sou-suo-ge-qu')" class="search-input" />
                 </div>
             </div>
 
@@ -208,6 +214,7 @@
                                 class="queue-play-btn fas fa-music"></button>
                             {{ $formatMilliseconds(item.timelen) }}
                         </div>
+                        <button class="mobile-more-button" :aria-label="`${item.name} 更多操作`" @click.stop="showContextMenu($event, item)"><i class="fas fa-ellipsis-h"></i></button>
                         </div>
                         </template>
             </RecycleScroller>
@@ -299,6 +306,7 @@ const updateFavoriteStatus = () => {
 // 批量选择相关状态
 const batchSelectionMode = ref(false);
 const isBatchMenuVisible = ref(false);
+const mobileActionsOpen = ref(false);
 const selectedTracks = ref([]);
 let lastSelectedIndex = -1;
 const songs = ref([]);
@@ -917,11 +925,27 @@ const handleClickOutside = (event) => {
     if (batchActionsMenu && !batchActionsMenu.contains(event.target) && !batchActionBtn.contains(event.target)) {
         isBatchMenuVisible.value = false;
     }
+
+    // 处理移动端「更多」二级菜单
+    if (mobileActionsOpen.value) {
+        const actionsInline = document.querySelector('.actions-inline');
+        const mobileMoreBtn = document.querySelector('.mobile-more-btn');
+        const clickedInsidePanel = actionsInline?.contains(event.target);
+        const clickedMoreBtn = mobileMoreBtn?.contains(event.target);
+        if (!clickedInsidePanel && !clickedMoreBtn) {
+            mobileActionsOpen.value = false;
+        }
+    }
 };
 
 // 切换下拉菜单显示状态
 const toggleDropdown = () => {
     isDropdownVisible.value = !isDropdownVisible.value;
+};
+
+// 移动端「更多」二级菜单
+const toggleMobileActions = () => {
+    mobileActionsOpen.value = !mobileActionsOpen.value;
 };
 
 // 切换批量选择模式
@@ -1391,6 +1415,17 @@ $shadow-light: 0 2px 10px rgba(0, 0, 0, 0.1);
     display: flex;
     align-items: center;
     gap: 10px;
+    position: relative;
+}
+
+// 桌面端包装器从布局中消失，子元素直接参与 .track-list-actions 的 flex 布局
+.actions-inline {
+    display: contents;
+}
+
+// 移动端「更多」按钮：仅小屏显示
+.mobile-more-btn {
+    display: none;
 }
 
 .batch-action-container {
@@ -2031,6 +2066,257 @@ $shadow-light: 0 2px 10px rgba(0, 0, 0, 0.1);
 
     50% {
         transform: scaleY(1);
+    }
+}
+
+/* ---------- 移动端工具栏适配 ---------- */
+@media (max-width: 768px) {
+    .track-list-header {
+        gap: 8px;
+        padding: 6px 0;
+    }
+
+    .track-list-title {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .track-list-actions {
+        gap: 8px;
+        flex-shrink: 0;
+    }
+
+    // 折叠态：批量操作 / 排序 / 视图切换 / 搜索 全部收进二级菜单
+    .actions-inline {
+        display: none;
+    }
+
+    .actions-inline.mobile-open {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        min-width: 240px;
+        padding: 12px;
+        background: #fff;
+        border: 1px solid var(--secondary-color);
+        border-radius: 10px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        box-sizing: border-box;
+        z-index: 130;
+    }
+
+    .actions-inline.mobile-open .batch-action-btn,
+    .actions-inline.mobile-open .view-mode-btn {
+        width: 100%;
+        height: 40px;
+        justify-content: flex-start;
+        gap: 8px;
+        padding: 0 12px;
+        box-sizing: border-box;
+    }
+
+    .actions-inline.mobile-open .view-mode-btn {
+        justify-content: center;
+    }
+
+    .actions-inline.mobile-open .sort-selector {
+        display: flex;
+        gap: 8px;
+    }
+
+    .actions-inline.mobile-open .sort-btn {
+        flex: 1;
+        min-height: 36px;
+    }
+
+    .actions-inline.mobile-open .search-input {
+        width: 100%;
+        height: 40px;
+        box-sizing: border-box;
+        font-size: 16px; // 防止 iOS 聚焦时自动放大
+    }
+
+    // 二级菜单内的批量菜单改为相对定位，避免超出屏幕
+    .actions-inline.mobile-open .batch-actions-menu {
+        left: 0;
+        right: 0;
+        width: auto;
+        top: calc(100% + 4px);
+    }
+
+    .mobile-more-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 31px;
+        padding: 0;
+        background-color: transparent;
+        border: 1px solid var(--secondary-color);
+        border-radius: 5px;
+        color: var(--text-color);
+        cursor: pointer;
+
+        &.active {
+            background-color: $primary;
+            border-color: $primary;
+            color: $white;
+        }
+
+        i {
+            font-size: 16px;
+        }
+    }
+}
+/* 手机：歌曲行改成「标题 + 歌手」两行紧凑结构，不再硬塞专辑/时间四列。
+   专辑列在窄屏没有价值，先隐藏；时间保留但收窄；更多按钮常显可点。 */
+@media (max-width: 768px) {
+    .detail-page {
+        padding: 12px;
+    }
+
+    .detail-sliver-header {
+        gap: 10px;
+        padding: 8px 0;
+        align-items: center;
+    }
+
+    .info {
+        max-width: none;
+        flex: 1 1 auto;
+        height: auto;
+    }
+
+    .title {
+        white-space: normal;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        word-break: break-word;
+    }
+
+    .subtitle,
+    .meta {
+        font-size: 12px;
+        margin-top: 4px;
+    }
+
+    .stats {
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 12px;
+    }
+
+    .actions {
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .actions .primary-btn,
+    .actions .follow-btn,
+    .actions .fav-btn,
+    .actions .more-btn {
+        min-height: 40px;
+    }
+
+    .dropdown-menu {
+        right: 0;
+        left: auto;
+        max-width: calc(100vw - 24px);
+    }
+
+    .dropdown-menu li {
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* 列表行：高度必须保持在 50px，否则 RecycleScroller 的 item-size 会算错导致行重叠 */
+    .li,
+    .li.cover-view {
+        height: 50px;
+        padding: 3px 4px;
+        gap: 6px;
+    }
+
+    .track-number,
+    .track-checkbox {
+        width: 22px;
+        margin-right: 4px;
+        flex-shrink: 0;
+    }
+
+    .track-title-container {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .track-title-tags .icon {
+        font-size: 9px;
+        padding: 0 2px;
+    }
+
+    .track-artist {
+        flex: 0 0 auto;
+        max-width: 34%;
+        padding: 0 4px;
+        font-size: 12px;
+    }
+
+    .track-album {
+        display: none;
+    }
+
+    .track-timelen {
+        width: auto;
+        padding-left: 4px;
+        font-size: 12px;
+        flex-shrink: 0;
+    }
+
+    .track-list-header-row {
+        display: none;
+    }
+
+    .track-list {
+        margin-top: 0;
+    }
+
+    .batch-action-btn,
+    .sort-btn,
+    .view-mode-btn {
+        min-height: 40px;
+    }
+
+    /* 「更多」按钮：40px 视觉尺寸，命中区靠行内边距补足，避免撑破 50px 行 */
+    .mobile-more-button {
+        flex: 0 0 40px;
+        width: 40px;
+        height: 44px;
+        min-height: 44px;
+    }
+}
+
+/* 手机横屏低高度：头部再压一档，避免黏性头吃掉半个屏幕 */
+@media (max-width: 900px) and (max-height: 480px) {
+    .detail-sliver-header {
+        padding: 4px 0;
+    }
+
+    .subtitle,
+    .meta,
+    .description {
+        display: none;
     }
 }
 </style>

@@ -11,11 +11,6 @@ export const onboardingGuideSteps = [
         description: '首页、发现和音乐库是最常用的入口。你可以从这里浏览推荐内容、发现新歌，或进入自己的音乐库。'
     },
     {
-        selector: '.app-header .search-bar input',
-        title: '搜索音乐',
-        description: '在这里输入歌曲、歌手或歌单关键词。按回车即可搜索，搜索模式可以在设置中进行切换。'
-    },
-    {
         selector: '.app-header .profile',
         title: '账号与设置',
         description: '点击头像可以登录账号、打开设置、检查更新和查看关于信息。'

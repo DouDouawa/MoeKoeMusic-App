@@ -24,7 +24,9 @@
         </div>
     </div>
 
-    <aside class="side-navigation" :class="{ collapsed: isCollapsed }">
+    <aside class="side-navigation" :class="{ collapsed: isCollapsed && !mobileDrawer, 'mobile-drawer': mobileDrawer }" :aria-label="$t('yin-le-ku')"
+        @touchstart.passive="onDrawerTouchStart" @touchmove.passive="onDrawerTouchMove" @touchend.passive="onDrawerTouchEnd" @touchcancel="resetDrawerTouch">
+        <button v-if="mobileDrawer" class="drawer-close" aria-label="关闭导航" @click="$emit('close')"><i class="fas fa-times"></i></button>
         <div class="side-profile">
             <router-link :to="!isCollapsed ? '/library' : '/settings'" class="side-profile-link">
                 <img :src="MoeAuth.UserInfo ? MoeAuth.UserInfo.pic : './assets/images/profile.jpg'"
@@ -159,6 +161,53 @@ import { get } from '../utils/request';
 import { MoeAuthStore } from '../stores/store';
 import AppUpdateDialog from './AppUpdateDialog.vue';
 import { ABOUT_DISCLAIMER_KEYS, DISCLAIMER_BANNER_SRC } from '../config/disclaimer';
+import { useDismissableOverlay } from '@/composables/useDismissableOverlay';
+import { isDrawerCloseSwipe } from '@/utils/drawerGesture';
+
+const props = defineProps({ mobileDrawer: Boolean });
+const emit = defineEmits(['close']);
+useDismissableOverlay(() => props.mobileDrawer, () => emit('close'));
+
+// 抽屉打开时，手指从右往左滑直接关闭，不用去点右上角的叉。
+// 位移在 touchmove 里持续记录，部分 WebView 的 touchend 拿不到 changedTouches。
+let touchStartX = 0;
+let touchStartY = 0;
+let touchLastX = 0;
+let touchLastY = 0;
+let touchStartAt = 0;
+let touchTracking = false;
+
+const resetDrawerTouch = () => { touchTracking = false; };
+
+const onDrawerTouchStart = (event) => {
+    touchTracking = false;
+    if (!props.mobileDrawer || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    touchStartX = touchLastX = touch.clientX;
+    touchStartY = touchLastY = touch.clientY;
+    touchStartAt = Date.now();
+    touchTracking = true;
+};
+
+const onDrawerTouchMove = (event) => {
+    if (!touchTracking) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+    touchLastX = touch.clientX;
+    touchLastY = touch.clientY;
+};
+
+const onDrawerTouchEnd = () => {
+    if (!touchTracking) return;
+    touchTracking = false;
+
+    const gesture = {
+        dx: touchLastX - touchStartX,
+        dy: touchLastY - touchStartY,
+        durationMs: Date.now() - touchStartAt
+    };
+    if (isDrawerCloseSwipe(gesture)) emit('close');
+};
 
 const MoeAuth = MoeAuthStore();
 const router = useRouter();
@@ -225,6 +274,10 @@ const toggleCollapse = () => {
     localStorage.setItem('sidebarCollapsed', isCollapsed.value ? '1' : '0');
     emitSidebarWidth();
 };
+
+// 移动端使用独立抽屉状态，绝不修改桌面折叠偏好。
+useDismissableOverlay(showProfile, () => { showProfile.value = false; });
+useDismissableOverlay(isDisclaimerVisible, () => { isDisclaimerVisible.value = false; });
 
 const getSearch = () => {
     const keyword = searchQuery.value.trim();
@@ -982,6 +1035,52 @@ watch(() => MoeAuth.isAuthenticated, (isAuthenticated) => {
     }
 }
 
+// 手机视口：侧边栏默认折叠成 64px 图标栏（见 applyMobileCollapse）。
+// 折叠态原本会隐藏 ⋯ 按钮，这里改成纵向排布，保证「设置/退出/更新/关于」仍然可达。
+@media (max-width: 767px) {
+    .side-profile {
+        padding: 10px 0;
+        gap: 6px;
+    }
+
+    .side-profile-menu-button {
+        width: 34px;
+        height: 34px;
+    }
+
+    // 菜单宽度固定 200px，展开态靠 right 贴住个人块右缘，避免像 left:180px 那样顶出屏幕
+    .side-profile-menu {
+        left: auto;
+        right: 0;
+        top: 58px;
+        max-width: calc(100vw - 16px);
+    }
+
+    .collapsed {
+        .side-profile {
+            flex-direction: column;
+            justify-content: center;
+            padding: 10px 0;
+            gap: 4px;
+        }
+
+        // 折叠态也必须能打开个人菜单，否则手机上无从进入设置
+        .side-profile-menu-button {
+            display: flex;
+            width: 30px;
+            height: 30px;
+        }
+
+        // 折叠栏只有 64px，菜单改到右侧展开
+        .side-profile-menu {
+            left: calc(100% + 6px);
+            right: auto;
+            top: 12px;
+            max-width: calc(100vw - 80px);
+        }
+    }
+}
+
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -1054,5 +1153,33 @@ watch(() => MoeAuth.isAuthenticated, (isAuthenticated) => {
     right: 10px;
     font-size: 12px;
     color: #666;
+}
+.drawer-close { display: none; }
+.modal-content { box-sizing: border-box; max-height: calc(100dvh - 32px); overflow-y: auto; overflow-wrap: anywhere; }
+.dark .modal-content { background: #202020; color: #eee; }
+@media (max-width: 768px) {
+    .side-top-actions { display: none; }
+    .side-navigation.mobile-drawer {
+        inset: 0 auto 0 0; width: min(320px, calc(100vw - 40px)); z-index: 1200;
+        height: 100vh; height: 100dvh; box-sizing: border-box;
+        padding-top: var(--app-safe-top, 0px); padding-bottom: var(--app-safe-bottom, 0px);
+        overflow-y: auto; overscroll-behavior: contain;
+    }
+    .drawer-close { display: flex; align-items: center; justify-content: center; align-self: flex-end; flex-shrink: 0; width: 44px; height: 44px; border: 0; border-radius: 8px; background: transparent; color: inherit; }
+    .mobile-drawer .side-navigation-main { min-height: auto; flex: 0 0 auto; overflow: visible; }
+    .mobile-drawer .side-playlist-area, .mobile-drawer .side-playlist-list { max-height: none; overflow: visible; flex: 0 0 auto; }
+    .mobile-drawer .side-profile { min-height: 64px; padding-top: 0; }
+    .mobile-drawer .side-profile-link { min-width: 0; }
+    .mobile-drawer .side-profile-info { min-width: 0; }
+    .mobile-drawer .side-profile-menu-button, .mobile-drawer .side-link, .mobile-drawer .side-playlist-tabs button { min-height: 44px; }
+    .mobile-drawer .side-profile-menu { z-index: 2; max-width: calc(100% - 24px); }
+    .mobile-drawer .side-profile-menu a { min-height: 44px; box-sizing: border-box; }
+    .mobile-drawer .side-search { display: flex; }
+    .mobile-drawer .side-search input { min-width: 0; width: 100%; font-size: 16px; }
+    .mobile-drawer .side-link span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .modal-overlay { padding: 12px; box-sizing: border-box; }
+    .modal-content { width: 100%; max-height: calc(100dvh - 24px - var(--app-safe-top, 0px) - var(--app-safe-bottom, 0px)); padding: 18px; }
+    .modal-content button { min-height: 44px; }
+    .version-number { position: static; margin-top: 12px; }
 }
 </style>

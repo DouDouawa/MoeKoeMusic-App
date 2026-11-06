@@ -1,0 +1,13 @@
+{
+  "appId": "cn.MoeKoe.Music",
+  "appName": "萌音",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "http",
+    "hostname": "play.mcd7.cn",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}

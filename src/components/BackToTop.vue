@@ -1,29 +1,36 @@
 <template>
     <transition name="btt">
         <button v-show="visible" class="back-to-top" type="button" :title="t('fan-hui-ding-bu')"
-            :style="{ bottom, right }" @click="scrollToTop">
+            :style="positionStyle" @click="scrollToTop">
             <i class="fas fa-arrow-up"></i>
         </button>
     </transition>
 </template>
 
 <script setup>
-import { nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
+import { nextTick, computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useMobileViewport } from '../composables/useMobileViewport';
 
 const props = defineProps({
     // 监听的滚动容器选择器
     target: { type: String, default: '.app-main-scroll' },
     // 下滑多少距离后显示按钮
     threshold: { type: Number, default: 360 },
-    // 按钮定位,可按页面覆盖
-    bottom: { type: String, default: '172px' },
-    right: { type: String, default: '22px' }
+    // 桌面端定位，可按页面覆盖；手机端统一走 CSS 变量，避免各处传的 px 值把按钮压到播放器下面
+    bottom: { type: String, default: '' },
+    right: { type: String, default: '' }
 });
 
 const { t } = useI18n();
+const isMobile = useMobileViewport();
 const visible = ref(false);
 let container = null;
+
+const positionStyle = computed(() => isMobile.value ? {} : {
+    ...(props.bottom ? { bottom: props.bottom } : {}),
+    ...(props.right ? { right: props.right } : {})
+});
 
 const syncVisible = () => {
     visible.value = (container?.scrollTop ?? 0) > props.threshold;
@@ -59,6 +66,9 @@ onBeforeUnmount(unbind);
 .back-to-top {
     position: fixed;
     z-index: 96;
+    // 默认位置写在 CSS 里，手机断点才能覆盖；页面传的 bottom/right 只在桌面生效
+    bottom: 172px;
+    right: 22px;
     width: 44px;
     height: 44px;
     display: flex;
@@ -100,5 +110,15 @@ onBeforeUnmount(unbind);
 .btt-leave-to {
     opacity: 0;
     transform: translateY(14px) scale(0.85);
+}
+
+// 手机端：贴到播放器上沿，别再让页面各自传 100px/172px 把按钮压在播放栏底下
+@media (max-width: 768px) {
+    .back-to-top {
+        bottom: calc(var(--app-player-height, 76px) + var(--app-safe-bottom, 0px) + 16px);
+        right: 14px;
+        width: 40px;
+        height: 40px;
+    }
 }
 </style>

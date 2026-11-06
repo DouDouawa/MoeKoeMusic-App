@@ -384,4 +384,54 @@ const handleSongContextMenu = (event, song) => {
         grid-template-columns: 1fr;
     }
 }
+/* 手机：「查看更多」原本是 13px 无内边距文字，触屏点不中；分区标题也要能换行 */
+@media (max-width: 768px) {
+    .complex-search-results {
+        gap: 18px;
+    }
+
+    .section-header {
+        gap: 8px;
+        flex-wrap: wrap;
+
+        h3 {
+            font-size: 17px;
+        }
+    }
+
+    .section-link {
+        min-height: 44px;
+        padding: 0 4px;
+        display: inline-flex;
+        align-items: center;
+        font-size: 13px;
+    }
+
+    .article-card,
+    .program-card {
+        min-width: 0;
+    }
+
+    .article-info h4,
+    .program-info h4,
+    .program-title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .program-meta,
+    .article-meta {
+        flex-wrap: wrap;
+        gap: 6px;
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 420px) {
+    .program-grid,
+    .article-grid {
+        gap: 10px;
+    }
+}
 </style>

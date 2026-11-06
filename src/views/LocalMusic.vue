@@ -5,60 +5,95 @@
             <template v-else>
                 <img class="cover-art" :style="coverStyle" :src="`./assets/images/local.png`" />
             <div class="info" :style="infoStyle">
-                <h1 class="title" :style="titleStyle">本地音乐</h1>
+                <h1 class="title" :style="titleStyle">{{ pageTitle }}</h1>
                 <div class="expanded-info" :style="detailsStyle">
-                    <p class="subtitle">本地歌曲数: {{ musicFiles.length }}</p>
-                    <div class="folder-info" v-if="currentFolder">
+                    <p class="subtitle">{{ pageSubtitle }}</p>
+                    <div class="folder-info" v-if="activeTab === 'local' && currentFolder">
                         <div class="folder-path">
                             <i class="fas fa-folder"></i>
                             <span>{{ currentFolder.name }}</span>
                         </div>
                     </div>
-                    <div class="description">这里存放着你授权的文件夹中的歌曲，支持 MP3、FLAC、WAV、AAC、OGG、M4A 等格式</div>
-                    <div class="actions">
+                    <div class="description">{{ pageDescription }}</div>
+                    <div class="actions" v-if="activeTab === 'local'">
                         <button class="primary-btn" @click="addPlaylistToQueue($event)" v-if="musicFiles.length > 0">
                             <i class="fas fa-play"></i> 播放全部
                         </button>
-                        <button class="upload-btn" @click="selectFolder" :disabled="loading">
-                            <i class="fas fa-folder-open"></i> {{ currentFolder ? '重新选择文件夹' : '选择音乐文件夹' }}
+                        <button v-if="nativeAudioPicker" class="upload-btn" @click="pickAndroidAudioFiles"
+                            :disabled="loading">
+                            <i class="fas fa-folder-open"></i> {{ musicFiles.length ? '重新选择音乐' : '选择音乐文件' }}
                         </button>
-                        <div class="folder-history-container" v-if="folderHistory.length > 0">
-                            <button class="upload-btn" @click="toggleFolderHistory" :disabled="loading">
-                                <i class="fas fa-history"></i> 快速切换
+                        <template v-else-if="supportsDirectoryPicker">
+                            <button class="upload-btn" @click="selectFolder" :disabled="loading">
+                                <i class="fas fa-folder-open"></i> {{ currentFolder ? '重新选择文件夹' : '选择音乐文件夹' }}
                             </button>
-                            <div class="folder-history-menu" v-if="isFolderHistoryVisible">
-                                <div v-for="folder in folderHistory" :key="folder.id" class="folder-history-item"
-                                    :class="{ active: currentFolder?.name === folder.name }">
-                                    <button class="folder-history-name" @click="switchFolder(folder)" :title="folder.name">
-                                        <i class="fas fa-folder"></i>
-                                        <span>{{ folder.name }}</span>
-                                    </button>
-                                    <button class="folder-history-delete" @click.stop="removeFolderHistory(folder.id)"
-                                        title="移除记录">
-                                        <i class="fas fa-times"></i>
-                                    </button>
+                            <div class="folder-history-container" v-if="folderHistory.length > 0">
+                                <button class="upload-btn" @click="toggleFolderHistory" :disabled="loading">
+                                    <i class="fas fa-history"></i> 快速切换
+                                </button>
+                                <div class="folder-history-menu" v-if="isFolderHistoryVisible">
+                                    <div v-for="folder in folderHistory" :key="folder.id" class="folder-history-item"
+                                        :class="{ active: currentFolder?.name === folder.name }">
+                                        <button class="folder-history-name" @click="switchFolder(folder)"
+                                            :title="folder.name">
+                                            <i class="fas fa-folder"></i>
+                                            <span>{{ folder.name }}</span>
+                                        </button>
+                                        <button class="folder-history-delete" @click.stop="removeFolderHistory(folder.id)"
+                                            title="移除记录">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <button v-if="currentFolder" class="upload-btn" @click="refreshFolder" :disabled="refreshing">
+                            <button v-if="currentFolder" class="upload-btn" @click="refreshFolder"
+                                :disabled="refreshing">
+                                <i class="fas fa-sync-alt"></i> 刷新
+                            </button>
+                        </template>
+                        <button v-else class="upload-btn" @click="triggerFileInput" :disabled="loading">
+                            <i class="fas fa-folder-open"></i> 选择音乐文件
+                        </button>
+                    </div>
+                    <div class="actions" v-else>
+                        <button v-if="cachedSongs.length > 0" class="primary-btn" @click="playCachedAll">
+                            <i class="fas fa-play"></i> 播放全部
+                        </button>
+                        <button class="upload-btn" @click="loadCachedSongs(true)" :disabled="cachedLoading">
                             <i class="fas fa-sync-alt"></i> 刷新
                         </button>
                     </div>
                 </div>
             </div>
-            <button v-if="musicFiles.length > 0" class="collapsed-play-btn" :style="collapsedActionsStyle"
-                @click="addPlaylistToQueue($event)" title="播放全部">
+            <button v-if="activeTab === 'local' && musicFiles.length > 0" class="collapsed-play-btn"
+                :style="collapsedActionsStyle" @click="addPlaylistToQueue($event)" title="播放全部">
                 <i class="far fa-play-circle"></i>
             </button>
             </template>
         </div>
         <div class="detail-sliver-spacer" :style="spacerStyle"></div>
 
+        <!-- 本地文件与已缓存分离：已缓存不需要登录、网络或文件夹授权 -->
+        <div class="local-tabs" role="tablist" :style="tabsStyle">
+            <button type="button" role="tab" class="local-tab" :class="{ active: activeTab === 'local' }"
+                :aria-selected="activeTab === 'local'" @click="setTab('local')">
+                <i class="fas fa-folder"></i> 本地歌曲<span class="local-tab-count">{{ musicFiles.length }}</span>
+            </button>
+            <button type="button" role="tab" class="local-tab" :class="{ active: activeTab === 'cached' }"
+                :aria-selected="activeTab === 'cached'" @click="setTab('cached')">
+                <i class="fas fa-download"></i> 已缓存<span class="local-tab-count">{{ cachedSongs.length }}</span>
+            </button>
+        </div>
+
+        <input ref="fileInputRef" class="hidden-file-input" type="file" accept="audio/*" multiple
+            @change="onFileInputChange" />
+
         <!-- 导航按钮 -->
-        <i class="location-arrow fas fa-crosshairs" @click="scrollToItem" title="当前播放歌曲"></i>
+        <i v-if="activeTab === 'local'" class="location-arrow fas fa-crosshairs" @click="scrollToItem"
+            title="当前播放歌曲"></i>
 
         <!-- 歌曲列表 -->
-        <div class="track-list-container" v-if="!loading">
+        <div class="track-list-container" v-if="activeTab === 'local' && !loading">
             <div class="track-list-header" :style="listHeaderStyle">
                 <h2 class="track-list-title" :style="listTitleStyle"><span>本地歌曲</span> ( {{ filteredTracks.length }} )</h2>
                 <div class="track-list-actions">
@@ -164,8 +199,58 @@
             </div>
         </div>
 
+        <!-- 已缓存：断网冷启动可用，与用户导入的本地文件分开 -->
+        <div class="track-list-container cached-list-container" v-else-if="activeTab === 'cached'">
+            <div class="track-list-header">
+                <h2 class="track-list-title"><span>已缓存歌曲</span> ( {{ cachedSongs.length }} )</h2>
+                <div class="track-list-actions">
+                    <span class="cached-usage">{{ cachedUsageText }}</span>
+                </div>
+            </div>
+            <p v-if="cacheNotice" class="cached-notice">{{ cacheNotice }}</p>
+
+            <div class="track-list-header-row" v-if="cachedSongs.length > 0">
+                <div class="track-number-header">♪</div>
+                <div class="track-title-header">曲名</div>
+                <div class="track-artist-header">歌手</div>
+                <div class="track-size-header">大小</div>
+                <div class="track-timelen-header">操作</div>
+            </div>
+
+            <div v-if="cachedLoading" class="loading-state cached-loading">
+                <div class="loading-spinner"></div>
+                <p>正在读取缓存...</p>
+            </div>
+            <div v-else class="cached-list">
+                <div v-for="(item, index) in cachedSongs" :key="item.cacheKey || item.hash" class="li cached-li"
+                    @click="playCachedSong(item)">
+                    <div class="track-number">{{ index + 1 }}</div>
+                    <div class="track-title" :title="item.name">
+                        {{ item.name }}
+                        <span v-if="item.isPreview" class="icon preview-icon">试听</span>
+                        <span v-else-if="item.qualityLabel || item.resolvedQuality"
+                            class="icon hq-icon">{{ item.qualityLabel || item.resolvedQuality }}</span>
+                    </div>
+                    <div class="track-artist" :title="item.author">{{ item.author }}</div>
+                    <div class="track-size">{{ formatFileSize(item.size) }}</div>
+                    <div class="track-timelen cached-actions">
+                        <button type="button" class="queue-play-btn fas fa-play" title="播放"
+                            @click.stop="playCachedSong(item)"></button>
+                        <button type="button" class="cached-remove fas fa-trash" title="删除缓存"
+                            @click.stop="removeCachedSong(item)"></button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="!cachedLoading && cachedSongs.length === 0" class="empty-state">
+                <img src="/assets/images/empty1.png">
+                <p>还没有缓存歌曲</p>
+                <p class="hint">正常播放过的歌曲会在后台保存完整音频；也可在设置中调整容量</p>
+            </div>
+        </div>
+
         <!-- 加载状态 -->
-        <div v-if="loading" class="loading-state">
+        <div v-if="loading && activeTab === 'local'" class="loading-state">
             <div class="loading-spinner"></div>
             <p>正在加载本地音乐...</p>
         </div>
@@ -181,18 +266,38 @@
 </template>
 
 <script setup>
-import { ref, shallowRef, onMounted, onBeforeUnmount, computed, toRaw, nextTick } from 'vue';
+import { ref, shallowRef, onMounted, onBeforeUnmount, computed, toRaw, nextTick, watch } from 'vue';
 import { RecycleScroller } from 'vue3-virtual-scroller';
+import { Capacitor, registerPlugin } from '@capacitor/core';
+import { useRoute, useRouter } from 'vue-router';
 import CommonSkeleton from '../components/CommonSkeleton.vue';
 import PageScrollbar from '../components/PageScrollbar.vue';
 import BackToTop from '../components/BackToTop.vue';
 import { parseBlob } from 'music-metadata';
 import { useStickyDetailHeader } from '@/composables/useStickyDetailHeader';
+import { getCacheStats, invalidateCachedSong, listCachedSongs } from '@/utils/audioCache';
 
 // Props
 const props = defineProps({
     playerControl: Object
 });
+
+const route = useRoute();
+const router = useRouter();
+
+// 平台能力：Android 用原生 SAF，桌面用目录选择，其余浏览器降级为文件输入
+const isAndroidShell = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+const audioPicker = isAndroidShell ? registerPlugin('MoePlayback') : null;
+const nativeAudioPicker = isAndroidShell;
+const supportsDirectoryPicker = !isAndroidShell && typeof window !== 'undefined' && 'showDirectoryPicker' in window;
+
+// 本地歌曲与已缓存是两个独立标签，已缓存不依赖登录/网络/文件夹授权
+const activeTab = ref(route.query.tab === 'cached' ? 'cached' : 'local');
+const cachedSongs = ref([]);
+const cachedLoading = ref(false);
+const cacheNotice = ref('');
+const cacheStats = ref({ count: 0, totalSize: 0, limitBytes: 0, pendingBytes: 0 });
+const fileInputRef = ref(null);
 
 // 通用状态
 const currentFolder = shallowRef(null);
@@ -253,16 +358,121 @@ const {
     listTitleStyle,
     collapsedActionsStyle,
     listHeaderStyle,
-    trackHeaderStyle
+    trackHeaderStyle,
+    tabsStyle
 } = useStickyDetailHeader();
 
+// 标签页头部文案
+const pageTitle = computed(() => (activeTab.value === 'cached' ? '已缓存' : '本地音乐'));
+const pageSubtitle = computed(() => (activeTab.value === 'cached'
+    ? `已缓存歌曲数: ${cachedSongs.value.length}`
+    : `本地歌曲数: ${musicFiles.value.length}`));
+const pageDescription = computed(() => {
+    if (activeTab.value === 'cached') {
+        return '缓存的完整歌曲，断网也能播放；删除单曲或清空缓存会移除这些文件';
+    }
+    if (isAndroidShell) return '选择设备上的音频文件，授权由系统保存，可重复播放';
+    if (!supportsDirectoryPicker) return '当前浏览器不支持选择文件夹，可改为选择音乐文件；导入的歌曲只在本次会话有效';
+    return '这里存放着你授权的文件夹中的歌曲，支持 MP3、FLAC、WAV、AAC、OGG、M4A 等格式';
+});
+const cachedUsageText = computed(() => {
+    const stats = cacheStats.value || {};
+    if (stats.unavailable) return '当前环境无法读取缓存';
+    return `${formatFileSize(Number(stats.totalSize) || 0)} / ${formatFileSize(Number(stats.limitBytes) || 0)}`;
+});
+
+const setTab = (tab) => {
+    if (activeTab.value === tab) return;
+    activeTab.value = tab;
+    const query = { ...route.query };
+    if (tab === 'cached') query.tab = 'cached';
+    else delete query.tab;
+    void router.replace({ path: route.path, query });
+    if (tab === 'cached') void loadCachedSongs();
+};
+
+watch(() => route.query.tab, (value) => {
+    const next = value === 'cached' ? 'cached' : 'local';
+    if (next === activeTab.value) return;
+    activeTab.value = next;
+    if (next === 'cached') void loadCachedSongs();
+});
+
+const loadCachedSongs = async (manual = false) => {
+    cachedLoading.value = true;
+    try {
+        const [songs, stats] = await Promise.all([listCachedSongs(), getCacheStats()]);
+        cachedSongs.value = Array.isArray(songs) ? songs : [];
+        if (stats) cacheStats.value = stats;
+        if (stats?.unavailable) {
+            cacheNotice.value = '当前环境无法读取缓存；在线播放不受影响，但这些歌曲无法离线播放';
+        } else if (manual && cachedSongs.value.length === 0) {
+            cacheNotice.value = '暂无已缓存歌曲';
+        } else {
+            cacheNotice.value = '';
+        }
+    } catch (error) {
+        console.error('[LocalMusic] 读取缓存失败:', error);
+        cachedSongs.value = [];
+        cacheNotice.value = '读取缓存失败，请稍后重试';
+    } finally {
+        cachedLoading.value = false;
+    }
+};
+
+const handleCacheChange = () => {
+    void loadCachedSongs();
+};
+
+const playCachedSong = async (item) => {
+    try {
+        if (!props.playerControl?.playCachedSong) {
+            window.$modal?.alert('当前播放器不支持播放已缓存歌曲');
+            return;
+        }
+        await props.playerControl.playCachedSong(item);
+    } catch (error) {
+        console.error('[LocalMusic] 播放缓存失败:', error);
+        window.$modal?.alert('播放失败: ' + (error?.message || error));
+    }
+};
+
+const playCachedAll = async () => {
+    if (cachedSongs.value.length === 0) return;
+    try {
+        if (!props.playerControl?.playCachedPlaylist) {
+            window.$modal?.alert('当前播放器不支持播放已缓存歌曲');
+            return;
+        }
+        await props.playerControl.playCachedPlaylist([...cachedSongs.value]);
+    } catch (error) {
+        console.error('[LocalMusic] 播放缓存列表失败:', error);
+        window.$modal?.alert('播放失败: ' + (error?.message || error));
+    }
+};
+
+const removeCachedSong = async (item) => {
+    const confirmed = await window.$modal.confirm(`删除《${item.name}》的本地缓存？`);
+    if (!confirmed) return;
+    const ok = await invalidateCachedSong(item);
+    if (!ok) {
+        window.$modal.alert('删除失败，请重试');
+        return;
+    }
+    await loadCachedSongs();
+};
+
 onMounted(() => {
-    loadLastFolder();
+    // 已缓存标签必须能在断网/未登录时独立可用，所以两个来源都独立加载
+    if (activeTab.value === 'local') loadLastFolder();
+    void loadCachedSongs();
+    window.addEventListener('audio-cache-change', handleCacheChange);
     document.addEventListener('click', handleClickOutside);
 });
 
 onBeforeUnmount(() => {
     document.removeEventListener('click', handleClickOutside);
+    window.removeEventListener('audio-cache-change', handleCacheChange);
     releaseCoverUrls();
 });
 
@@ -600,13 +810,112 @@ const loadFolderHandle = async () => {
     }
 };
 
-// 检查是否支持 File System Access API
-const checkFileSystemSupport = () => {
-    if (!('showDirectoryPicker' in window)) {
-        window.$modal.alert('您的浏览器不支持 File System Access API，请使用 Chrome 86+ 或 Edge 86+');
-        return false;
+// 目录选择能力检测：不支持时静默降级为文件输入，不在进页面时弹窗
+const checkFileSystemSupport = () => supportsDirectoryPicker;
+
+const triggerFileInput = () => {
+    fileInputRef.value?.click();
+};
+
+const buildImportedTrack = (file, metadata) => {
+    const extension = '.' + getFileExtension(file.name).toLowerCase();
+    return {
+        cacheKey: `browser:${file.name}:${file.size}:${file.lastModified}`,
+        name: file.name,
+        displayName: metadata.title,
+        author: metadata.artist,
+        album: metadata.album,
+        size: file.size,
+        lastModified: file.lastModified,
+        type: file.type,
+        file,
+        duration: metadata.duration,
+        timelen: metadata.duration * 1000,
+        bitrate: metadata.bitrate,
+        sampleRate: metadata.sampleRate,
+        coverBlob: metadata.coverBlob,
+        coverState: metadata.coverState,
+        qualityInfo: getQualityInfo(extension, metadata.bitrate, metadata.sampleRate)
+    };
+};
+
+// 浏览器降级：保留选中的 File，播放时直接用 Blob，不依赖目录授权
+const importSelectedFiles = async (files) => {
+    const accepted = [];
+    for (const file of files) {
+        const extension = '.' + getFileExtension(file.name || '').toLowerCase();
+        if (!supportedFormats.includes(extension)) continue;
+        const metadata = await readAudioMetadata(file);
+        if (!metadata) continue;
+        accepted.push(buildImportedTrack(file, metadata));
     }
-    return true;
+    if (accepted.length === 0) {
+        window.$modal?.alert('没有可导入的音频文件');
+        return;
+    }
+    const merged = new Map(musicFiles.value.map(item => [item.cacheKey, item]));
+    accepted.forEach(track => merged.set(track.cacheKey, track));
+    applyMusicFiles([...merged.values()]);
+};
+
+const onFileInputChange = async (event) => {
+    const files = Array.from(event.target.files || []);
+    // 清空 value，便于再次选择同一批文件
+    event.target.value = '';
+    if (files.length === 0) return;
+    loading.value = true;
+    try {
+        await importSelectedFiles(files);
+    } catch (error) {
+        console.error('[LocalMusic] 导入本地音频失败:', error);
+        window.$modal?.alert('导入失败: ' + (error?.message || error));
+    } finally {
+        loading.value = false;
+    }
+};
+
+// Android：原生 SAF 选择，授权由系统持久保存，返回 content:// 描述
+const pickAndroidAudioFiles = async () => {
+    if (!audioPicker) return;
+    loading.value = true;
+    try {
+        const result = await audioPicker.pickAudioFiles();
+        const songs = Array.isArray(result?.songs) ? result.songs : [];
+        if (songs.length === 0) return;
+        const tracks = songs.map((song, index) => {
+            const name = song.name || `音频 ${index + 1}`;
+            const size = Number(song.size) || 0;
+            return {
+                cacheKey: `android:${song.hash || song.uri || name}`,
+                hash: song.hash || `local_${song.uri || name}`,
+                name,
+                displayName: song.name || name,
+                author: song.author || '未知艺术家',
+                album: song.album || '本地音乐',
+                size,
+                duration: Number(song.duration) || 0,
+                timelen: Number(song.timeLength || song.timelen) || (Number(song.duration) || 0) * 1000,
+                uri: song.uri,
+                isLocal: true,
+                cover: DEFAULT_COVER,
+                qualityInfo: null
+            };
+        });
+        const merged = new Map(musicFiles.value.map(item => [item.cacheKey, item]));
+        tracks.forEach(track => merged.set(track.cacheKey, track));
+        const files = sortMusicFiles([...merged.values()].map(track => ({
+            ...track,
+            filesize: formatFileSize(track.size),
+            cover: track.cover || DEFAULT_COVER
+        })));
+        musicFiles.value = files;
+        filteredTracks.value = files;
+    } catch (error) {
+        console.error('[LocalMusic] 选择音频失败:', error);
+        window.$modal?.alert('选择音频失败: ' + (error?.message || error));
+    } finally {
+        loading.value = false;
+    }
 };
 
 // 加载上次选择的文件夹
@@ -1328,9 +1637,227 @@ const getSortIconClass = (field) => {
 .track-list-container {
 }
 
+.local-tabs {
+    display: flex;
+    gap: 8px;
+    margin: 12px 0 4px;
+    border-bottom: 1px solid #eee;
+    position: sticky;
+    top: 0;
+    /* 纵向层级：详情头(116) > 标签页(115) > 列表头(114) > 列头(113)。
+       与视觉上的上下顺序一致，列表容器滚到底把列表头往上推时会被标签页盖住，
+       而不是反过来压住标签页。 */
+    z-index: 115;
+    background: #fff;
+    padding-bottom: 2px;
+}
+
+.local-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    color: var(--text-color);
+    font-size: 15px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+
+    &.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+        font-weight: 600;
+    }
+
+    i {
+        font-size: 13px;
+    }
+}
+
+.local-tab-count {
+    font-size: 12px;
+    opacity: 0.75;
+}
+
+.hidden-file-input {
+    display: none;
+}
+
+.cached-usage {
+    font-size: 13px;
+    color: #666;
+    font-variant-numeric: tabular-nums;
+}
+
+.cached-notice {
+    margin: 6px 0 10px;
+    font-size: 13px;
+    color: #b26a00;
+}
+
+.cached-loading {
+    padding: 40px 20px;
+}
+
+.cached-list {
+    width: 100%;
+}
+
+.li.cached-li {
+    gap: 6px;
+}
+
+.cached-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    width: 95px;
+}
+
+.cached-remove {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 6px;
+
+    &:hover {
+        color: #f56c6c;
+    }
+}
+
+.preview-icon {
+    color: #b26a00;
+    border-color: #b26a00;
+}
+
+// 手机端：头部改为纵向，隐藏占宽列，触控目标不小于 44px
+@media (max-width: 768px) {
+    .detail-page {
+        padding: 12px;
+    }
+
+    .detail-sliver-header {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .cover-art {
+        width: 96px;
+        height: 96px;
+    }
+
+    .info {
+        /* flex-basis 必须是 0：用 auto 时会拿内容自然宽度去和封面争行宽，
+           逼出 flex-wrap 换行，标题就掉到第二行、被锁死的折叠高度裁到标签页上。 */
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: none;
+    }
+
+    .title {
+        font-size: 24px;
+    }
+
+    .subtitle {
+        font-size: 14px;
+    }
+
+    .description {
+        font-size: 13px;
+        -webkit-line-clamp: 3;
+    }
+
+    .actions {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .primary-btn,
+    .upload-btn {
+        min-height: 44px;
+    }
+
+    .track-list-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .track-list-title {
+        font-size: 18px;
+    }
+
+    .track-list-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .search-input {
+        width: 100%;
+        min-height: 44px;
+    }
+
+    .track-list-header-row,
+    .li {
+        // 手机只保留曲名/歌手，其余列不挤压主信息
+        .track-album,
+        .track-album-header,
+        .track-size,
+        .track-size-header {
+            display: none;
+        }
+    }
+
+    .track-list-header-row {
+        padding: 8px 6px;
+    }
+
+    .li {
+        padding: 8px 6px;
+    }
+
+    .track-title {
+        flex: 2 1 0;
+        min-width: 0;
+    }
+
+    .track-artist {
+        flex: 1 1 0;
+        min-width: 0;
+        padding: 0 4px;
+    }
+
+    .track-timelen {
+        flex: 0 0 74px;
+        width: 74px;
+        text-align: right;
+    }
+
+    .cached-actions {
+        width: 74px;
+        flex: 0 0 74px;
+    }
+
+    .queue-play-btn,
+    .cached-remove {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .location-arrow {
+        bottom: 150px;
+    }
+}
+
+
 .track-list-header {
     position: sticky;
-    z-index: 115;
+    z-index: 114;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1660,7 +2187,7 @@ const getSortIconClass = (field) => {
 
 .track-list-header-row {
     position: sticky;
-    z-index: 114;
+    z-index: 113;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1844,6 +2371,136 @@ const getSortIconClass = (field) => {
 
     100% {
         transform: rotate(360deg);
+    }
+}
+/* 手机：云盘/本地文件列表与歌单详情共用同一套行布局——
+   四列（歌名/歌手/大小/时长）在 320px 屏上必然互相挤压，这里收成「歌名+副标题」，
+   大小列隐藏、时长收窄，行高保持 50px 以匹配 RecycleScroller 的 item-size。 */
+@media (max-width: 768px) {
+    .detail-page {
+        padding: 12px;
+    }
+
+    .detail-sliver-header {
+        gap: 10px;
+        padding: 8px 0;
+        align-items: center;
+    }
+
+    .info {
+        /* 与上一处 768px 断点保持一致：flex-basis 为 0 才不会被 flex-wrap 换行 */
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: none;
+        height: auto;
+    }
+
+    .title {
+        white-space: normal;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        word-break: break-word;
+    }
+
+    .subtitle,
+    .meta {
+        font-size: 12px;
+        margin-top: 4px;
+        overflow-wrap: anywhere;
+    }
+
+    .actions {
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .actions button,
+    .primary-btn,
+    .upload-btn,
+    .manage-btn {
+        min-height: 40px;
+    }
+
+    .li,
+    .li.cover-view {
+        height: 50px;
+        padding: 3px 4px;
+        gap: 6px;
+    }
+
+    .track-number,
+    .track-checkbox {
+        width: 22px;
+        margin-right: 4px;
+        flex-shrink: 0;
+    }
+
+    .track-title-container {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .track-artist {
+        flex: 0 0 auto;
+        max-width: 34%;
+        padding: 0 4px;
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* 大小列在窄屏没有信息价值，先隐藏；时长保留但压到最小 */
+    .track-size {
+        display: none;
+    }
+
+    .track-timelen {
+        width: auto;
+        padding-left: 4px;
+        font-size: 12px;
+        flex-shrink: 0;
+    }
+
+    .track-list-header-row {
+        display: none;
+    }
+
+    .track-list-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .search-input {
+        min-width: 0;
+        font-size: 16px;
+    }
+
+    .batch-action-btn,
+    .view-mode-btn,
+    .sort-btn {
+        min-height: 40px;
+    }
+
+    .mobile-more-button {
+        flex: 0 0 40px;
+        width: 40px;
+        height: 44px;
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 900px) and (max-height: 480px) {
+    .detail-sliver-header {
+        padding: 4px 0;
+    }
+
+    .subtitle,
+    .meta {
+        display: none;
     }
 }
 </style>

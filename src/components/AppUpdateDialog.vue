@@ -13,7 +13,7 @@
                 <button @click="startOnlineUpdate" :disabled="isStartingUpdate || isDownloadingUpdate || isUpdateDownloaded">
                     {{ isUpdateDownloaded ? '下载完成' : isDownloadingUpdate ? '下载中...' : isStartingUpdate ? '正在启动...' : '在线更新' }}
                 </button>
-                <button @click="openManualUpdatePage">手动更新</button>
+                <button class="quiet-button" @click="openManualUpdatePage">手动更新</button>
                 <button class="secondary-button" @click="closeUpdateDialog">取消更新</button>
             </div>
         </div>
@@ -24,6 +24,7 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue';
 import MarkdownContent from './MarkdownContent.vue';
 import { openRegisterUrl } from '../utils/utils';
+import { useDismissableOverlay } from '@/composables/useDismissableOverlay';
 
 const props = defineProps({
     appVersion: {
@@ -116,6 +117,9 @@ const fetchLatestVersion = async () => {
 const closeUpdateDialog = () => {
     showUpdateDialog.value = false;
 };
+
+// 进弹层栈，返回手势先关这个弹层，而不是直接去切路由或隐藏应用。
+useDismissableOverlay(showUpdateDialog, closeUpdateDialog);
 
 const openManualUpdatePage = () => {
     openRegisterUrl(downloadUrl.value || repoUrl);
@@ -334,6 +338,65 @@ defineExpose({
     .secondary-button {
         background: #eef1f6;
         color: #333;
+    }
+
+    /* 手动更新是备选路径，不该和「在线更新」抢同一个主视觉 */
+    .quiet-button {
+        background: transparent;
+        color: var(--primary-color);
+        border: 1px solid rgba(var(--primary-color-rgb), 0.4);
+    }
+}
+
+/* 手机端：三个按钮横排会被压成 124px 最小宽度来回折行，改成等宽竖排。 */
+@media (max-width: 768px) {
+    /* 注意：.modal-overlay 这个类名在 CustomModal/Disclaimer 里也有，
+       scoped 的 data-v 属性会互相匹配，align-items 无法可靠覆盖。
+       所以这里不改 align-items，改用弹层自身 margin:auto：
+       空间够时居中，内容超高时自动贴顶并可滚动。 */
+    .modal-overlay {
+        padding: 24px 16px;
+        overflow-y: auto;
+        box-sizing: border-box;
+    }
+
+    .update-dialog {
+        margin: auto;
+        width: 100%;
+    }
+
+    .update-dialog h2 {
+        margin-top: 0;
+        font-size: 20px;
+        line-height: 1.4;
+    }
+
+    .update-dialog .update-log-box {
+        max-height: min(34vh, 220px);
+    }
+
+    .update-dialog .update-dialog-actions {
+        flex-direction: column-reverse;
+        gap: 10px;
+        margin-top: 16px;
+    }
+
+    /* 桌面靠 margin-top 撑开，竖排已经有 gap，留着会让间距翻倍 */
+    .update-dialog .update-dialog-actions button {
+        width: 100%;
+        min-width: 0;
+        margin-top: 0;
+        margin-left: 0;
+        padding: 12px 14px;
+    }
+
+    .update-dialog .update-progress-inline {
+        gap: 10px;
+    }
+
+    .update-dialog .update-progress-percent {
+        min-width: 44px;
+        font-size: 12px;
     }
 }
 

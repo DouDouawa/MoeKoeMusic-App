@@ -16,6 +16,7 @@
           <p class="result-publish-date">{{ song.PublishDate || song.PublishTime }}</p>
         </div>
       </div>
+      <button class="mobile-more-button" :aria-label="`${song.OriSongName || song.SongName} 更多操作`" @click.stop="emit('song-contextmenu', $event, song)"><i class="fas fa-ellipsis-h"></i></button>
     </li>
   </ul>
 </template>
@@ -150,5 +151,19 @@ const emit = defineEmits(['song-click', 'song-contextmenu']);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+@media (max-width: 768px) {
+  /* 行内各有 max-width/min-width，任何一项没设收缩都会把整行撑出视口 */
+  .song-list { min-width: 0; }
+  .result-item { gap: 8px; padding: 8px 0; min-width: 0; max-width: 100%; box-sizing: border-box; }
+  .result-item img { width: 44px; height: 44px; margin-right: 0; flex-shrink: 0; }
+  .result-info { flex: 1 1 auto; min-width: 0; }
+  .result-name { font-size: 14px; gap: 4px; max-width: 100%; min-width: 0; }
+  .result-name-text { min-width: 0; }
+  .result-meta { flex: 0 0 auto; min-width: 0; padding: 0; }
+  .result-duration { font-size: 12px; }
+  .result-publish-date { display: none; }
+  .result-type { font-size: 12px; margin-top: 3px; }
+  .result-item:hover { background: var(--color-secondary-bg-for-transparent); }
 }
 </style>

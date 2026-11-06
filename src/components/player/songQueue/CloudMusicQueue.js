@@ -1,8 +1,10 @@
 import { get } from '../../../utils/request';
 
 export default function useCloudMusicQueue(t, musicQueueStore, currentSong, timeoutId) {
+    let requestId = 0;
     // 添加云盘歌曲到播放列表
     const addCloudMusicToQueue = async (hash, name, author, timeLength, cover, isReset = true) => {
+    const token = ++requestId;
         const currentSongHash = currentSong.value.hash;
         if (typeof window !== 'undefined' && typeof window.electron !== 'undefined') {
             window.electron.ipcRenderer.send('set-tray-title', name + ' - ' + author);
@@ -20,6 +22,7 @@ export default function useCloudMusicQueue(t, musicQueueStore, currentSong, time
             console.log('[SongQueue] 获取云盘歌曲:', hash, name);
 
             const response = await get('/user/cloud/url', { hash });
+            if (token !== requestId) return { stale: true };
             if (response.status !== 1) {
                 console.error('[SongQueue] 获取云盘音乐URL失败:', response);
                 currentSong.value.author = currentSong.value.name = t('huo-qu-yin-le-shi-bai');
@@ -74,6 +77,7 @@ export default function useCloudMusicQueue(t, musicQueueStore, currentSong, time
             // 返回歌曲对象
             return { song };
         } catch (error) {
+        if (token !== requestId) return { stale: true };
             console.error('[SongQueue] 获取云盘音乐地址出错:', error);
             currentSong.value.author = currentSong.value.name = t('huo-qu-yin-le-di-zhi-shi-bai');
             if (musicQueueStore.queue.length === 0) return { error: true };
@@ -120,6 +124,7 @@ export default function useCloudMusicQueue(t, musicQueueStore, currentSong, time
     };
 
     return {
+    cancelPendingCloud: () => { requestId += 1; },
         addCloudMusicToQueue,
         addCloudPlaylistToQueue
     };

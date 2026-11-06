@@ -1,5 +1,5 @@
 <template>
-    <div v-show="scrollable" ref="trackRef" class="page-scrollbar"
+    <div v-show="scrollable && !isMobile" ref="trackRef" class="page-scrollbar"
         :class="{ 'is-visible': isVisible, 'is-dragging': dragging }" :style="trackStyle"
         @mouseenter="hovering = true" @mouseleave="hovering = false" @pointerdown="onTrackPointerDown">
         <div class="page-scrollbar-thumb" :style="thumbStyle" @pointerdown="onThumbPointerDown"></div>
@@ -7,7 +7,11 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue';
+import { computed, nextTick, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue';
+import { useMobileViewport } from '../composables/useMobileViewport';
+
+// 手机没有常驻滚动条这回事，而且 12px 的轨道会抢掉右边缘的点击/滑动。
+const isMobile = useMobileViewport();
 
 const props = defineProps({
     // 要接管的滚动容器选择器
@@ -161,6 +165,7 @@ const unbind = () => {
 };
 
 const bind = () => {
+    if (isMobile.value) return;
     const next = document.querySelector(props.target);
     if (!next) return;
     if (next === container) {
@@ -178,6 +183,9 @@ const bind = () => {
     }
     measure();
 };
+
+// 断点切换时不要留下无人使用的监听
+watch(isMobile, value => { if (value) unbind(); else nextTick(bind); });
 
 onMounted(() => {
     nextTick(bind);
@@ -252,5 +260,12 @@ onBeforeUnmount(() => {
     width: 8px;
     background: linear-gradient(180deg, var(--primary-color), var(--secondary-color));
     box-shadow: 0 2px 10px rgba(var(--primary-color-rgb), 0.35);
+}
+
+// 手机端不显示常驻滚动条：12px 轨道贴在右缘会截胡滑动与点击
+@media (max-width: 768px) {
+    .page-scrollbar {
+        display: none;
+    }
 }
 </style>

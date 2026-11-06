@@ -18,6 +18,8 @@ $shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.12);
     height: auto;
     align-self: stretch;
     overflow: hidden;
+    /* 手机上靠指针拖拽滚动歌词，禁止浏览器把该手势当作页面滚动 */
+    touch-action: none;
     display: flex;
     justify-content: center;
     padding: 20px;
@@ -48,6 +50,12 @@ $shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.12);
     transition: transform 0.6s ease;
     width: 100%;
     min-width: 0;
+
+    /* 拖拽中必须关掉过渡：否则每一小步位移都被 0.6s 缓动包住，
+       内容永远追不上手指，手感就是"又黏又重"。 */
+    &.is-dragging {
+        transition: none;
+    }
 
     &.lyrics-align-left {
         .line {
@@ -99,10 +107,9 @@ $shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.12);
     margin-bottom: 12px;
     font-size: 1em;
     transform-origin: center;
-    transition:
-        font-size 0.42s cubic-bezier(0.18, 1.35, 0.28, 1),
-        filter 0.32s ease;
-    will-change: font-size;
+    /* font-size 一旦加过渡，每一帧都会触发整段歌词重新布局（60 次重排/行切换）。
+       这里是行级离散变化，直接跳变更稳，也让滚动不再和布局抢主线程。 */
+    transition: filter 0.24s ease;
 }
 
 .line-group.current-line-group {
@@ -171,7 +178,9 @@ $shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.12);
     background-position: 100%;
     -webkit-background-clip: text;
     background-clip: text;
-    transition: background-position 0.6s ease;
+    /* 原来的 0.6s 会让每个字染色都拖半秒，多字并发就成一团糊，看着像"跟不上"。
+       收紧到 0.1s：保留一点软化，但视觉上已经是即点即亮。 */
+    transition: background-position 0.1s linear;
 }
 
 .highlight {
@@ -221,6 +230,7 @@ $shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.12);
 .player-bar {
     display: flex;
     align-items: center;
+    box-sizing: border-box;
     padding: 10px;
     width: 100%;
     max-width: 880px;
@@ -229,6 +239,7 @@ $shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.12);
 .album-art {
     width: 60px;
     height: 60px;
+    flex-shrink: 0;
     border-radius: $radius-md;
     margin-right: 15px;
     background-color: #ddd;
@@ -304,6 +315,34 @@ $shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.12);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
+    /* 跑马灯：只在文字真的超出容器时由 JS 加上 .is-marquee。
+       轨道内放两段相同文字，整条轨道一起左移「一段文字 + 间距」的距离后
+       瞬间回到起点——此刻第二段正好停在第一段原来的位置，视觉上无缝。 */
+    &.is-marquee {
+        text-overflow: clip;
+
+        .song-title-track {
+            display: inline-flex;
+            animation: song-title-marquee var(--marquee-duration, 9s) linear infinite;
+        }
+
+        .song-title-text + .song-title-text {
+            margin-left: 32px;
+        }
+    }
+}
+
+@keyframes song-title-marquee {
+    0%,
+    10% {
+        transform: translateX(0);
+    }
+
+    90%,
+    100% {
+        transform: translateX(var(--marquee-distance, 0));
+    }
 }
 
 .quality-badge {
@@ -608,6 +647,7 @@ $shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.12);
     position: relative;
     overflow: hidden;
     cursor: pointer;
+    touch-action: none;
 
     .volume-progress {
         height: 100%;
@@ -1010,20 +1050,158 @@ $shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.12);
     }
 }
 
-.playback-speed {
+.player-more {
     position: relative;
-    display: inline-block;
-}
-
-.speed-btn {
     display: inline-flex;
     align-items: center;
+}
+
+/* 「更多」菜单：倍速 + 收藏至 + 分享 合并入口 */
+.more-menu {
+    left: auto;
+    right: 0;
+    transform: none;
+    min-width: 190px;
+    padding: 8px;
+
+    &::after {
+        left: auto;
+        right: 12px;
+        transform: none;
+    }
+}
+
+/* 移动端：按钮位于栏中部，若相对按钮定位菜单会超出左边；
+   改为相对 .player-container（fixed）定位，贴视口右侧 */
+@media (max-width: 768px) {
+    .player-more {
+        position: static;
+    }
+
+    .more-menu {
+        left: auto;
+        right: 12px;
+        bottom: 100%;
+        margin-bottom: 8px;
+        transform: none;
+        // 移动端新增播放模式区块后菜单更高，横屏小高度时允许内部滚动
+        max-height: calc(100vh - 140px);
+        overflow-y: auto;
+
+        &::after {
+            display: none;
+        }
+    }
+}
+
+.more-section-title {
+    padding: 2px 4px 6px;
+    font-size: 12px;
+    color: $text-muted;
+}
+
+.more-chip-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 0 2px 2px;
+
+    // 播放模式：图标 + 文案，两列更宽松
+    &.more-mode-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+.more-chip {
+    display: flex;
+    align-items: center;
     justify-content: center;
+    gap: 4px;
+    padding: 5px 0;
+    border: 1px solid var(--border-color);
+    border-radius: $radius-sm;
+    background: transparent;
+    color: var(--text-color);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.18s, border-color 0.18s, color 0.18s;
+
+    &:hover {
+        background-color: var(--background-color);
+    }
+
+    &.active {
+        border-color: var(--primary-color);
+        background-color: var(--secondary-color);
+        color: var(--primary-text-color);
+    }
 
     i {
-        line-height: 1;
-        transform: translateY(-2px);
+        flex-shrink: 0;
     }
+}
+
+.more-volume {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 2px 2px;
+
+    > i {
+        width: 14px;
+        flex-shrink: 0;
+        font-size: 12px;
+        color: $text-muted;
+        cursor: pointer;
+    }
+
+    .volume-slider {
+        flex: 1;
+        width: auto;
+        min-width: 0;
+    }
+
+    .more-volume-value {
+        flex-shrink: 0;
+        width: 34px;
+        font-size: 11px;
+        color: $text-muted;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.more-divider {
+    height: 1px;
+    margin: 8px 2px;
+    background-color: var(--border-color);
+}
+
+.more-action {
+    gap: 10px;
+
+    i {
+        width: 16px;
+        text-align: center;
+        flex-shrink: 0;
+        color: $text-muted;
+    }
+}
+
+.more-menu-enter-active,
+.more-menu-leave-active {
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.more-menu-enter-from,
+.more-menu-leave-to {
+    opacity: 0;
+    transform: translateY(6px);
+}
+
+.more-menu-enter-to,
+.more-menu-leave-from {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .playback-mode {
@@ -1056,23 +1234,6 @@ $shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.12);
         width: 16px;
         text-align: center;
         flex-shrink: 0;
-    }
-}
-
-.speed-menu {
-    min-width: 70px;
-}
-
-.speed-option {
-    justify-content: center;
-
-    &:hover {
-        background-color: var(--background-color);
-    }
-
-    &.active {
-        background-color: var(--secondary-color);
-        color: var(--primary-text-color);
     }
 }
 
@@ -1179,5 +1340,258 @@ $shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.12);
     .close-btn {
         top: 16px;
         right: 16px;
+    }
+}
+
+// 平板以下（手机）：底栏只保留封面，隐藏歌曲名与歌手；
+// 三组元素（封面 / 控制键 / 附加按钮）按从左往右排列，剩余空间由 space-between 平分到组间，
+// 既不会像 flex-grow 那样把三个控制键顶到中间，也不像纯左排列那样在右侧留一大片空白。
+// 注意：必须放在文件末尾，基础规则（.player-bar/.controls/.extra-controls）在同优先级下才会被覆盖。
+@media (max-width: 767px) {
+    .song-info {
+        display: none;
+    }
+
+    .player-bar {
+        justify-content: space-between;
+    }
+
+    // 底栏横向空间有限：缩小封面与控制键，保证「收藏至」回到主栏后仍能一行放下
+    .album-art {
+        width: 48px;
+        height: 48px;
+        margin-right: 8px;
+
+        img {
+            width: 100%;
+            height: 100%;
+        }
+    }
+
+    .controls {
+        flex-grow: 0;
+        justify-content: flex-start;
+    }
+
+    .control-btn {
+        width: 38px;
+        height: 38px;
+        font-size: 20px;
+    }
+
+    .extra-controls {
+        margin-left: 8px;
+        gap: 2px;
+    }
+
+    .extra-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
+    }
+}
+
+// 超窄屏（≤359px）：再收一档，避免底栏横向溢出
+@media (max-width: 359px) {
+    .album-art {
+        width: 40px;
+        height: 40px;
+        margin-right: 4px;
+    }
+
+    .control-btn {
+        width: 34px;
+        height: 34px;
+        font-size: 18px;
+    }
+
+    .extra-controls {
+        margin-left: 4px;
+        gap: 1px;
+    }
+
+    .extra-btn {
+        width: 26px;
+        height: 26px;
+        font-size: 13px;
+    }
+}
+
+// ===== 手机播放器：主区保留封面/曲名/播放/下一首/队列/更多 =====
+// 父模板用 .mobile-secondary 收进「更多」，.mobile-only 只在手机出现。
+.mobile-only {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .mobile-secondary {
+        display: none !important;
+    }
+
+    .mobile-only {
+        /* revert 回到元素自身的默认 display（按钮 / 容器各自正确），避免把它们全变成行内 flex */
+        display: revert;
+    }
+
+    .player-container {
+        padding-bottom: var(--app-safe-bottom, 0px);
+    }
+
+    .player-bar {
+        padding: 8px 8px;
+        gap: 0;
+    }
+
+    // 触控命中区不小于 44px
+    .control-btn,
+    .extra-btn,
+    .player-more .more-btn,
+    .like-btn {
+        min-width: 44px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .album-art {
+        width: 44px;
+        height: 44px;
+
+        img { width: 44px; height: 44px; }
+    }
+
+    // 手机播放器需要显示曲名，否则只剩封面无法辨认
+    .song-info {
+        display: block;
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: none;
+        margin-left: 8px;
+        margin-right: 4px;
+    }
+
+    .song-title-row {
+        max-width: 100%;
+    }
+
+    .song-title {
+        font-size: 14px;
+        margin-bottom: 2px;
+    }
+
+    .song-artist {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .more-menu {
+        max-height: calc(100dvh - 120px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-bottom: calc(8px + var(--app-safe-bottom, 0px));
+    }
+
+    .more-chip,
+    .more-menu .player-menu-item,
+    .more-action {
+        min-height: 44px;
+    }
+
+    // 全屏歌词：单列，保留进度与主要控制，安全区补偿
+    .lyrics-screen {
+        padding: calc(12px + var(--app-safe-top, 0px)) 12px calc(12px + var(--app-safe-bottom, 0px));
+        box-sizing: border-box;
+        height: 100vh;
+        height: 100dvh;
+    }
+
+    .lyrics-screen .player-controls .control-btn {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+// 320px 极窄屏：进一步压缩，保证主按钮可达
+@media (max-width: 359px) {
+    .player-bar { padding: 6px; }
+
+    .album-art {
+        width: 38px;
+        height: 38px;
+
+        img { width: 38px; height: 38px; }
+    }
+
+    .song-title { font-size: 13px; }
+
+    .control-btn,
+    .extra-btn {
+        min-width: 40px;
+    }
+}
+
+/* 手机底栏必须整体适配 320px：右侧附加控制不能越过视口。
+   触屏上没有 hover 隐藏的余地，直接压缩间距与按钮宽度，并允许标题区让位。 */
+@media (max-width: 768px) {
+    .player-bar {
+        overflow: hidden;
+    }
+
+    .extra-controls {
+        margin-left: 4px;
+        gap: 0;
+        flex-shrink: 0;
+    }
+
+    .extra-btn {
+        width: 38px;
+        height: 44px;
+        min-width: 38px;
+    }
+
+    .controls {
+        flex-shrink: 0;
+    }
+
+    .song-info {
+        /* 剩余空间 = 363 视口 - 8 左内边距 - 44 封面 - 132 播放控件 - 38 更多 - 8 右内边距
+           = 133px。播放列表已收进「更多」菜单，这里比只留 95px 时多出一整首歌名的宽度。 */
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: 133px;
+    }
+
+    .song-title-row {
+        max-width: 100%;
+        gap: 4px;
+    }
+
+    .quality-menu-wrapper {
+        /* 徽章必须保持单行，收缩的是左边的歌名 */
+        flex-shrink: 0;
+    }
+
+    .quality-badge {
+        white-space: nowrap;
+    }
+
+    .song-title-row .song-title {
+        /* 歌名让位给徽章，而不是反过来把「标准」压成竖排 */
+        min-width: 0;
+        flex: 0 1 auto;
+    }
+}
+
+@media (max-width: 359px) {
+    .extra-btn {
+        width: 34px;
+        min-width: 34px;
+    }
+
+    .control-btn {
+        width: 36px;
+        min-width: 36px;
     }
 }

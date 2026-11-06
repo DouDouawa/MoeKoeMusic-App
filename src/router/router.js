@@ -15,6 +15,7 @@ import LocalMusic from '@/views/LocalMusic.vue';
 import VideoPlayer from '@/views/VideoPlayer.vue';
 import Recognize from '@/views/Recognize.vue';
 import { MoeAuthStore } from '@/stores/store';
+import { getLyricsRedirect, getStartupRedirect } from '@/config/startupPage';
 
 
 const routes = [
@@ -46,22 +47,20 @@ const router = createRouter({
     routes
 });
 
+const isElectronShell = () => typeof window !== 'undefined' && !!window.electron;
+
 // 全局导航守卫
 router.beforeEach((to, from, next) => {
-    console.log('完整的路由地址:', to.fullPath);
+    // 桌面悬浮歌词窗口依赖 Electron IPC；Web/Android 走主布局的全屏歌词
+    const lyricsRedirect = getLyricsRedirect(to, isElectronShell());
+    if (lyricsRedirect) return next(lyricsRedirect);
 
-    const MoeAuth = MoeAuthStore();
-    const settings = JSON.parse(localStorage.getItem('settings')) || {};
-    const allowedStartupPages = ['Index', 'Discover', 'Library'];
-    const startupPage = allowedStartupPages.includes(settings.startupPage) ? settings.startupPage : 'Index';
-
-    const isFirstEnter = from.matched.length === 0;
-
-    if (isFirstEnter && to.path === '/' && startupPage !== 'Index') {
-        return next({ name: startupPage });
-    }
+    // 仅冷启动且目标是无业务参数的根入口时应用启动页；分享、MV、登录回跳等深链优先
+    const startupRedirect = getStartupRedirect(to, from);
+    if (startupRedirect) return next(startupRedirect);
 
     if (to.matched.some(record => record.meta.requiresAuth)) {
+        const MoeAuth = MoeAuthStore();
         if (!MoeAuth.isAuthenticated) {
             return next({
                 name: 'Login',

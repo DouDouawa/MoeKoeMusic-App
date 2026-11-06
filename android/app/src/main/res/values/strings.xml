@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">萌音</string>
+    <string name="title_activity_main">萌音</string>
+    <string name="package_name">cn.MoeKoe.Music</string>
+    <string name="custom_url_scheme">cn.MoeKoe.Music</string>
+    <string name="playback_channel_name">音乐播放</string>
+    <string name="playback_previous">上一首</string>
+    <string name="playback_next">下一首</string>
+</resources>

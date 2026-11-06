@@ -1,4 +1,6 @@
 import { computed } from 'vue';
+import { startupPageOptions } from './startupPage';
+import { clearAudioCache, getCacheStats } from '../utils/audioCache';
 
 export const createSettingSections = (t, actions = {}) => computed(() => [
     {
@@ -111,13 +113,13 @@ export const createSettingSections = (t, actions = {}) => computed(() => [
                 key: 'startupPage',
                 defaultValue: 'Index',
                 itemIcon: 'fas fa-home',
-                selectionTitle: '启动页',
-                options: [
-                    { displayText: t('shou-ye'), value: 'Index' },
-                    { displayText: t('fa-xian'), value: 'Discover' },
-                    { displayText: t('yin-le-ku'), value: 'Library' }
-                ],
-                label: '启动页'
+                selectionTitle: t('qi-dong-ye'),
+                // 与路由守卫共用同一份白名单，未知值回退首页
+                options: startupPageOptions(t),
+                label: t('qi-dong-ye'),
+                helpText: t('qi-dong-ye-shuo-ming'),
+                showRefreshHint: true,
+                refreshHintText: t('zhong-qi-hou-sheng-xiao')
             },
             {
                 key: 'onboardingGuide',
@@ -230,6 +232,55 @@ export const createSettingSections = (t, actions = {}) => computed(() => [
                 showRefreshHint: true,
                 refreshHintText: t('zhong-qi-hou-sheng-xiao'),
                 helpLink: 'https://music.moekoe.cn/guide/data-source.html'
+            },
+            {
+                key: 'audioCacheEnabled',
+                defaultValue: 'on',
+                itemIcon: 'fas fa-download',
+                selectionTitle: t('yin-pin-huan-cun'),
+                options: [
+                    { displayText: t('da-kai'), value: 'on' },
+                    { displayText: t('guan-bi'), value: 'off' }
+                ],
+                label: t('yin-pin-huan-cun'),
+                icon: '🎵 ',
+                helpText: t('yin-pin-huan-cun-shuo-ming')
+            },
+            {
+                key: 'audioCacheLimitMB',
+                defaultValue: '500',
+                itemIcon: 'fas fa-hdd',
+                // 自定义弹层：预设 + 正数 MB 输入，避免只给三档固定值
+                customPanel: 'audioCacheLimitMB',
+                options: [
+                    { displayText: '200 MB', value: '200' },
+                    { displayText: '500 MB', value: '500' },
+                    { displayText: '1024 MB', value: '1024' },
+                    { displayText: '2048 MB', value: '2048' }
+                ],
+                selectionTitle: t('huan-cun-rong-liang'),
+                label: t('huan-cun-rong-liang'),
+                icon: '💾 ',
+                helpText: t('huan-cun-rong-liang-shuo-ming')
+            },
+            {
+                key: 'audioCacheClear',
+                itemIcon: 'fas fa-trash-alt',
+                label: t('qing-kong-huan-cun'),
+                icon: '🧹 ',
+                helpText: t('qing-kong-huan-cun-shuo-ming'),
+                customText: t('qing-kong-huan-cun'),
+                action: async () => {
+                    const stats = await getCacheStats();
+                    const sizeText = `${((stats?.totalSize || 0) / 1024 / 1024).toFixed(1)} MB`;
+                    const count = stats?.count ?? 0;
+                    const confirmed = await window.$modal.confirm(
+                        `${t('qing-kong-huan-cun')}?\n${t('huan-cun-yi-yong-kong-jian')}: ${sizeText} ${t('gong')} ${count} ${t('shou')}`
+                    );
+                    if (!confirmed) return;
+                    const ok = await clearAudioCache();
+                    window.$modal.alert(ok ? t('huan-cun-yi-qing-kong') : t('qing-kong-shi-bai'));
+                }
             }
         ]
     },

@@ -210,8 +210,9 @@ export default function useLyricsHandler(t) {
     };
 
     // 滚动到当前歌词行
-    const scrollToCurrentLine = (lineIndex) => {
-        if (currentLineIndex === lineIndex) return;
+    const scrollToCurrentLine = (lineIndex, force = false) => {
+        if (lineIndex < 0) return;
+        if (!force && currentLineIndex === lineIndex) return;
 
         currentLineIndex = lineIndex;
         // 当前行用 font-size 放大会改变各行高度，须等 DOM 应用放大后再测量，否则用旧布局定位会偏移
@@ -334,6 +335,60 @@ export default function useLyricsHandler(t) {
         return lyricsData.value.length - 1;
     };
 
+    /**
+     * 二分查找当前时间所处的行索引。
+     * 每帧都要算一次，绝不能像 getCurrentLineIndex 那样线性扫全表。
+     * @returns {number} 行索引，时间还没到第一行时返回 -1
+     */
+    const findActiveLineIndex = (currentTimeMs) => {
+        const lines = lyricsData.value;
+        if (!lines || lines.length === 0) return -1;
+
+        let low = 0;
+        let high = lines.length - 1;
+        let result = -1;
+
+        while (low <= high) {
+            const mid = (low + high) >> 1;
+            const startTime = lines[mid]?.characters?.[0]?.startTime;
+            if (startTime === undefined) { high = mid - 1; continue; }
+            if (currentTimeMs >= startTime) {
+                result = mid;
+                low = mid + 1;
+            } else {
+                high = mid - 1;
+            }
+        }
+
+        return result;
+    };
+
+    /**
+     * 某一行在给定时刻已完成的字符数。
+     * 逐字染色只需要这个数，不必改动任何响应式数据。
+     */
+    const countHighlightedChars = (lineIndex, currentTimeMs) => {
+        const chars = lyricsData.value[lineIndex]?.characters;
+        if (!chars || chars.length === 0) return 0;
+
+        // 字符时间轴单调递增，同样用二分
+        let low = 0;
+        let high = chars.length - 1;
+        let count = 0;
+
+        while (low <= high) {
+            const mid = (low + high) >> 1;
+            if (currentTimeMs >= chars[mid].startTime) {
+                count = mid + 1;
+                low = mid + 1;
+            } else {
+                high = mid - 1;
+            }
+        }
+
+        return count;
+    };
+
     // 获取当前行歌词文本
     const getCurrentLineText = (currentTime) => {
         if (!lyricsData.value || lyricsData.value.length === 0) return "";
@@ -366,6 +421,8 @@ export default function useLyricsHandler(t) {
         resetLyricsHighlight,
         getCurrentLineText,
         scrollToCurrentLine,
+        findActiveLineIndex,
+        countHighlightedChars,
         toggleLyricsMode
     };
 }

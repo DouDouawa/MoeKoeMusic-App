@@ -27,7 +27,13 @@ const getBrowserLocale = () => {
   return Object.keys(messages).includes(lang) ? lang : 'ja';
 };
 
-const defaultLocale = JSON.parse(localStorage.getItem('settings'))?.['language'] || getBrowserLocale();
+let defaultLocale = getBrowserLocale();
+try {
+  const language = JSON.parse(localStorage.getItem('settings') || '{}')?.language;
+  if (language && Object.hasOwn(messages, language)) defaultLocale = language;
+} catch {
+  // An invalid saved preference must never prevent the app from opening.
+}
 
 const i18n = createI18n({
   locale: defaultLocale,
