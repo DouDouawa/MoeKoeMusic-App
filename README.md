@@ -81,7 +81,6 @@ pnpm serve
 ```sh
 pnpm build          # 网页端
 pnpm build:client   # Electron 客户端
-pnpm build:docker   # Docker 部署
 ```
 
 运行单元测试：

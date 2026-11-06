@@ -78,52 +78,7 @@
 
 Перейдите на страницу [Releases](https://github.com/MoeKoeMusic/MoeKoeMusic/releases) этого проекта и скачайте установочный пакет.
 
-### 2. Установка веб-версии (docker)
-
-* Внимание: после развёртывания необходимо открыть соответствующий порт на сервере, либо использовать обратный прокси для доступа по домену.
-
-    1. Способ 1: Быстрый запуск (рекомендуется)
-
-    ```
-    git clone --depth=1 https://github.com/MoeKoeMusic/MoeKoeMusic.git
-    cd MoeKoeMusic
-    docker compose up -d &
-    ```
-
-    2. ~~Способ 2: Установка в один клик через docker-compose (образ ещё не загружен официально)~~
-    
-    ```
-    docker run -d --name MoeKoeMusic -p 8080:8080 -e PORT=6521 -e platform=lite iajue/moekoe-music:latest
-    ```
-
-    3. Способ 3: Оркестрация контейнеров в панели Baota
-
-    * Удалённый образ, версия может отставать от официальной
-    
-    ```
-    version: '3.3'
-    
-    services:
-      moekoe-music:
-        # Адрес образа
-        image: registry.cn-wulanchabu.aliyuncs.com/youngxj/moekoe-music:latest
-        container_name: moekoe-music # Имя контейнера
-        restart: unless-stopped # Автоперезапуск
-        build:
-          context: .
-          dockerfile: Dockerfile
-        environment:
-          - PORT=6521
-          - platform=lite
-        ports: # Проброс портов
-          - "8080:8080"  # Фронтенд-сервис
-          - "6521:6521"  # API-сервис
-    
-    ```
-    
-    Скопируйте содержимое выше, вставьте его в раздел оркестрации контейнеров панели Baota, задайте имя оркестрации `MoeKoeMusic` и нажмите «Развернуть».
-
-### 3. Развёртывание в один клик
+### 2. Развёртывание в один клик
 [![Развернуть с EdgeOne Pages](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://edgeone.ai/pages/new?template=https://github.com/MoeKoeMusic/MoeKoeMusic&install-command=npm%20install&output-directory=dist&root-directory=.%2F&build-command=npm%20run%20build&env=VITE_APP_API_URL)
 
 Необходимо указать собственный API-адрес в переменной окружения `VITE_APP_API_URL`.
@@ -157,7 +112,6 @@ pnpm install --frozen-lockfile
 ```sh
 pnpm run build # Собрать фронтенд для веба
 pnpm run build:client # Собрать фронтенд для клиента
-pnpm run build:docker # Собрать фронтенд для Docker-образа
 ```
 5. Скомпилируйте проект
   - Windows: 

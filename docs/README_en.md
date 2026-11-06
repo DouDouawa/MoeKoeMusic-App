@@ -78,52 +78,7 @@ On my personal profile page I said I especially love listening to music, Japanes
 
 Visit the [Releases](https://github.com/MoeKoeMusic/MoeKoeMusic/releases) page of this project to download an installer.
 
-### 2. Web Installation (Docker)
-
-* Note: After deployment, please open the corresponding port on your server before using it, or use a reverse proxy to access it via a domain name.
-
-    1. Option 1: Quick start (recommended)
-
-    ```
-    git clone --depth=1 https://github.com/MoeKoeMusic/MoeKoeMusic.git
-    cd MoeKoeMusic
-    docker compose up -d &
-    ```
-
-    2. ~~Option 2: One-click installation with docker-compose (the image has not yet been uploaded officially)~~
-    
-    ```
-    docker run -d --name MoeKoeMusic -p 8080:8080 -e PORT=6521 -e platform=lite iajue/moekoe-music:latest
-    ```
-
-    3. Option 3: Baota (aaPanel) container orchestration
-
-    * Remote image; the version may lag behind the official one
-    
-    ```
-    version: '3.3'
-    
-    services:
-      moekoe-music:
-        # Image address
-        image: registry.cn-wulanchabu.aliyuncs.com/youngxj/moekoe-music:latest
-        container_name: moekoe-music # Container name
-        restart: unless-stopped # Auto restart
-        build:
-          context: .
-          dockerfile: Dockerfile
-        environment:
-          - PORT=6521
-          - platform=lite
-        ports: # Port mapping
-          - "8080:8080"  # Frontend service
-          - "6521:6521"  # API service
-    
-    ```
-    
-    Copy the content above, paste it into the container orchestration section of the Baota panel, name the orchestration `MoeKoeMusic`, and click Deploy.
-
-### 3. One-Click Deployment
+### 2. One-Click Deployment
 [![Deploy with EdgeOne Pages](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://edgeone.ai/pages/new?template=https://github.com/MoeKoeMusic/MoeKoeMusic&install-command=npm%20install&output-directory=dist&root-directory=.%2F&build-command=npm%20run%20build&env=VITE_APP_API_URL)
 
 You need to fill in your own API address in the environment variable `VITE_APP_API_URL`.
@@ -157,7 +112,6 @@ Choose one of the commands below for your target platform to build the frontend
 ```sh
 pnpm run build # Build the frontend for the web
 pnpm run build:client # Build the frontend for the client
-pnpm run build:docker # Build the frontend for the Docker image
 ```
 5. Compile the project
   - Windows:

@@ -46,7 +46,8 @@ body:
         - Windows
         - Linux （请在系统信息部分中说明发行版）
         - MacOS
-        - Docker / Web
+        - Android （请在系统信息部分中说明机型与系统版本）
+        - Web
         - 其它（请在系统信息部分中说明）
     validations:
       required: true
@@ -92,9 +93,11 @@ body:
       label: 日志（可选）
       description: |
         添加日志以便于我们能更好的定位问题
-        - 如果是 Docker 镜像或 Web 端：
+        - 如果是 Web 端：
           按 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd> （或 <kbd>F12</kbd>）打开浏览器开发人员工具
           切换到“控制台（Console）”选项卡，截图错误信息
+        - 如果是 Android 端：
+          在 头像-设置-系统-日志 中导出日志
         - 如果是客户端：
           在 头像-设置-系统-日志 中导出日志
   - type: textarea

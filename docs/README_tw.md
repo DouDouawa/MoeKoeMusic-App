@@ -78,52 +78,7 @@
 
 造訪本專案的 [Releases](https://github.com/MoeKoeMusic/MoeKoeMusic/releases) 頁面下載安裝包。
 
-### 2. WEB 端安裝（docker）
-
-* 注意：部署後請開放伺服器對應連接埠才可使用，或者使用反向代理實現網域存取。
-
-    1. 方式一：快速啟動（推薦）
-
-    ```
-    git clone --depth=1 https://github.com/MoeKoeMusic/MoeKoeMusic.git
-    cd MoeKoeMusic
-    docker compose up -d &
-    ```
-
-    2. ~~方式二：使用 docker-compose 一鍵安裝（映像檔暫未上傳官方）~~
-    
-    ```
-    docker run -d --name MoeKoeMusic -p 8080:8080 -e PORT=6521 -e platform=lite iajue/moekoe-music:latest
-    ```
-
-    3. 方式三：寶塔容器編排
-
-    * 遠端映像檔，版本可能會落後於官方
-    
-    ```
-    version: '3.3'
-    
-    services:
-      moekoe-music:
-        # 映像檔位址
-        image: registry.cn-wulanchabu.aliyuncs.com/youngxj/moekoe-music:latest
-        container_name: moekoe-music # 容器名稱
-        restart: unless-stopped # 自動重啟
-        build:
-          context: .
-          dockerfile: Dockerfile
-        environment:
-          - PORT=6521
-          - platform=lite
-        ports: # 連接埠對應
-          - "8080:8080"  # 前端服務
-          - "6521:6521"  # 介面服務
-    
-    ```
-    
-    複製上面的內容，貼到寶塔面板的容器編排裡面，編排名稱為 `MoeKoeMusic`，點擊部署即可。
-
-### 3. 一鍵部署
+### 2. 一鍵部署
 [![使用 EdgeOne Pages 部署](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://edgeone.ai/pages/new?template=https://github.com/MoeKoeMusic/MoeKoeMusic&install-command=npm%20install&output-directory=dist&root-directory=.%2F&build-command=npm%20run%20build&env=VITE_APP_API_URL)
 
 需在環境變數（`VITE_APP_API_URL`）中填寫自己的 API 位址
@@ -157,7 +112,6 @@ pnpm install --frozen-lockfile
 ```sh
 pnpm run build # 為網頁端建置前端
 pnpm run build:client # 為客戶端建置前端
-pnpm run build:docker # 為 Docker 映像檔建置前端
 ```
 5. 編譯專案
   - Windows: 

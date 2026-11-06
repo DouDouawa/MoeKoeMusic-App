@@ -78,52 +78,7 @@
 
 본 프로젝트의 [Releases](https://github.com/MoeKoeMusic/MoeKoeMusic/releases) 페이지에 접속하여 설치 파일을 다운로드하세요.
 
-### 2. WEB 버전 설치(docker)
-
-* 참고: 배포 후 서버의 해당 포트를 열어야 사용할 수 있으며, 또는 리버스 프록시를 사용해 도메인으로 접속해야 합니다.
-
-    1. 방법 1: 빠른 시작(권장)
-
-    ```
-    git clone --depth=1 https://github.com/MoeKoeMusic/MoeKoeMusic.git
-    cd MoeKoeMusic
-    docker compose up -d &
-    ```
-
-    2. ~~방법 2: docker-compose로 원클릭 설치(이미지는 아직 공식에 업로드되지 않았습니다)~~
-    
-    ```
-    docker run -d --name MoeKoeMusic -p 8080:8080 -e PORT=6521 -e platform=lite iajue/moekoe-music:latest
-    ```
-
-    3. 방법 3: 바오타(宝塔) 컨테이너 오케스트레이션
-
-    * 원격 이미지이므로 버전이 공식보다 뒤처질 수 있습니다
-    
-    ```
-    version: '3.3'
-    
-    services:
-      moekoe-music:
-        # 이미지 주소
-        image: registry.cn-wulanchabu.aliyuncs.com/youngxj/moekoe-music:latest
-        container_name: moekoe-music # 컨테이너 이름
-        restart: unless-stopped # 자동 재시작
-        build:
-          context: .
-          dockerfile: Dockerfile
-        environment:
-          - PORT=6521
-          - platform=lite
-        ports: # 포트 매핑
-          - "8080:8080"  # 프런트엔드 서비스
-          - "6521:6521"  # API 서비스
-    
-    ```
-    
-    위 내용을 복사하여 바오타 패널의 컨테이너 오케스트레이션에 붙여 넣고, 오케스트레이션 이름을 `MoeKoeMusic`으로 지정한 뒤 "배포"를 클릭하세요.
-
-### 3. 원클릭 배포
+### 2. 원클릭 배포
 [![EdgeOne Pages로 배포](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://edgeone.ai/pages/new?template=https://github.com/MoeKoeMusic/MoeKoeMusic&install-command=npm%20install&output-directory=dist&root-directory=.%2F&build-command=npm%20run%20build&env=VITE_APP_API_URL)
 
 환경 변수 `VITE_APP_API_URL`에 본인의 API 주소를 입력해야 합니다.
@@ -157,7 +112,6 @@ pnpm install --frozen-lockfile
 ```sh
 pnpm run build # 웹용 프런트엔드 빌드
 pnpm run build:client # 클라이언트용 프런트엔드 빌드
-pnpm run build:docker # Docker 이미지용 프런트엔드 빌드
 ```
 5. 프로젝트 컴파일
   - Windows: 

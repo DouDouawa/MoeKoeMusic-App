@@ -147,7 +147,6 @@
 | 🚧    | `wip`        | 开发中（Work In Progress） | `🚧 wip: 正在实现订单详情页面`         |
 | ⬆️    | `upgrade`    | 升级依赖                 | `⬆️ upgrade: 升级 Electron 到 v28`       |
 | ⬇️    | `downgrade`  | 降级依赖                 | `⬇️ downgrade: 降级 vue-router 到 v4.0.0`|
-| 🐳    | `docker`     | 与 Docker 相关的更改      | `🐳 docker: 添加 Dockerfile`            |
 | 💄    | `ui`         | 修改 UI 或样式           | `💄 ui: 优化按钮样式`                     |
 | 💥    | `breaking`   | 破坏性更新（需注意兼容）    | `💥 breaking: 移除旧版 API`            |
 | 📈    | `analytics`  | 数据分析或埋点代码         | `📈 analytics: 添加页面浏览统计`        |
