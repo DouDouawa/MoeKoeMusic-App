@@ -2020,7 +2020,7 @@ const onMoreAddToPlaylist = () => {
 
 const onMoreLike = () => {
     showMoreMenu.value = false;
-    playlistSelect.toLike();
+    playlistSelect.value?.toLike();
 };
 
 const onMoreShare = () => {
@@ -2030,7 +2030,9 @@ const onMoreShare = () => {
 
 const onMoreOpenQueue = () => {
     showMoreMenu.value = false;
-    queueList.openQueue();
+    // queueList 是 ref，JS 里必须取 .value 才是组件实例；
+    // 写成 queueList.openQueue() 调用的是 ref 对象自身，会报 not a function
+    queueList.value?.openQueue();
 };
 
 // 改变播放速度
