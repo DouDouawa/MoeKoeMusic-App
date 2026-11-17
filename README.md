@@ -13,49 +13,49 @@
 
 ## 📌 这是什么呀
 
-这里是 [MoeKoeMusic](https://github.com/MoeKoeMusic/MoeKoeMusic/) 的一个个人分支喵～本喵只做一件事：**给 Android 端做前端适配**，别的都不碰的说。
+这里是我 fork 的 [MoeKoeMusic](https://github.com/MoeKoeMusic/MoeKoeMusic/)。我只做一件事：**给 Android 端做前端适配**，别的都不碰喵。
 
-原项目是个用 Vue 3 写的酷狗第三方客户端，网页端、Electron 桌面端、Docker 部署样样都有。本喵就在它的前端上面套了层 Capacitor 壳，顺手把 Android 端的播放和缓存能力补齐，再把手机上那些别扭的布局和交互一个一个捋顺喵。
+原项目是个用 Vue 3 写的酷狗第三方客户端，网页端、Electron 桌面端、Docker 部署样样都有。我在它的前端上面套了层 Capacitor 壳，顺手把 Android 端的播放和缓存能力补齐，再把手机上那些别扭的布局和交互一个一个捋顺喵。
 
-范围这事儿得先讲清楚，免得误会喵：
+范围这事儿得先讲清楚，免得你误会：
 
-- **只改前端**。这个仓库里一行服务端代码都没有，原项目的后端本喵既不修改、也不替代。
-- **后端还是原作者的**。API 怎么请求、接口怎么约定，全按原项目来，本喵一个字都没动喵。
-- 桌面端（Electron）和网页端的能力保持原样，本喵的爪子只伸到 Android 相关的地方。
-- 上游那些 Docker 部署文件被本喵叼走了，因为跟 Android 端实在没关系。想用 Docker 部署的话，请回[原项目](https://github.com/MoeKoeMusic/MoeKoeMusic/)那边喵。
+- **我只改了前端**。这个仓库里一行服务端代码都没有，原项目的后端我既不修改、也不替代。
+- **后端还是原作者的**。API 怎么请求、接口怎么约定，全按原项目来，我一个字都没动喵。
+- 桌面端（Electron）和网页端的能力保持原样，我的爪子只伸到 Android 相关的地方。
+- 上游那些 Docker 部署文件被我叼走了，因为跟 Android 端实在没关系。你要用 Docker 部署的话，请回[原项目](https://github.com/MoeKoeMusic/MoeKoeMusic/)那边喵。
 
 后端地址要填哪里？看下面的[后端说明](#-后端说明)就好啦。
 
-## ✨ 本喵都改了什么
+## ✨ 我改了什么
 
 ### Android 客户端
 
-原项目靠 Electron 做桌面端，本喵另外搭了个 Capacitor 工程，把同一套前端塞进 Android 应用里，还补上了网页端做不到的那些事喵：
+原项目靠 Electron 做桌面端，我另外搭了个 Capacitor 工程，把同一套前端塞进 Android 应用里，还补上了网页端做不到的那些事喵：
 
-- **原生播放服务**：`PlaybackService` + `QueuePlayer` 把播放队列接过去管，切后台、息屏都不带断的喵
-- **原生音频缓存**：`AudioCache` / `CacheDb` 管离线缓存和断点续传，再也不用受 WebView 那点存储和内存的气
-- **音源解析下沉**：`SourceResolver` 在 Java 层就把多音源解析和切换办妥了
+- **原生播放服务**：我让 `PlaybackService` + `QueuePlayer` 把播放队列接过去管，切后台、息屏都不带断的喵
+- **原生音频缓存**：`AudioCache` / `CacheDb` 负责离线缓存和断点续传，再也不用受 WebView 那点存储和内存的气
+- **音源解析下沉**：我把解析放到了 `SourceResolver`，在 Java 层就把多音源解析和切换办妥了
 - **PCM 录制**：`PcmRecorder` 负责听歌识曲要用的音频采集
-- 最后由 `MoePlaybackPlugin` 把这些本事递给 JS 层用
+- 最后由 `MoePlaybackPlugin` 把我做的这些本事递给 JS 层用
 
 ### 移动端适配
 
-- 加了抽屉导航、手势返回、下拉刷新、页签滑动这些顺手的交互（`useNavigationDrawer`、`drawerGesture`、`usePullToRefresh`、`useTabSwipe`）
-- 移动端断点统一到 `768px`。原先 `767px` / `768px` 两套断点并存搞得布局错位，被本喵收拾掉了喵
-- 「只有 hover 才看得见」的入口修好啦：收藏区关闭按钮、歌曲播放图标在手机上根本点不着，这哪行喵
-- 顶部导航右上角那个三点图标换成了用户头像入口，没登录就显示默认头像
-- 音乐库、本地音乐、设置这些页面的栅格和操作区，按手机宽度重排了一遍
-- 用户卡片的操作按钮原先被 `content-box` 撑成 50px 的方块，也改成正常胶囊啦
+- 我加了抽屉导航、手势返回、下拉刷新、页签滑动这些顺手的交互（`useNavigationDrawer`、`drawerGesture`、`usePullToRefresh`、`useTabSwipe`）
+- 移动端断点我统一到了 `768px`。原先 `767px` / `768px` 两套断点并存搞得布局错位，被我收拾掉了喵
+- 「只有 hover 才看得见」的入口我也修好了：收藏区关闭按钮、歌曲播放图标在手机上根本点不着，这哪行喵
+- 顶部导航右上角那个三点图标，我换成了用户头像入口，没登录就显示默认头像
+- 音乐库、本地音乐、设置这些页面的栅格和操作区，我按手机宽度重排了一遍
+- 用户卡片的操作按钮原先被 `content-box` 撑成 50px 的方块，我也改成正常胶囊啦
 
 ### 播放器
 
-- 新增 `NativeAudioController` 和 `PlaybackIntent`，把原生和网页两条播放链路拢到一处喵
-- 歌名太长不滚动、太短又乱滚动的问题都修了
-- 设置里切完音质，音质徽章不会立刻变、非得切首歌才刷新——这个也一并修好了喵
+- 我新增了 `NativeAudioController` 和 `PlaybackIntent`，把原生和网页两条播放链路拢到一处喵
+- 歌名太长不滚动、太短又乱滚动，这两个毛病我都修了
+- 设置里切完音质，音质徽章不会立刻变、非得切首歌才刷新——这个我也一并修好了喵
 
 ## 🛠 技术栈
 
-本喵用的家伙什儿喵：
+我用的是这些家伙什儿喵：
 
 | 层次 | 技术 |
 |---|---|
@@ -67,7 +67,7 @@
 
 ## 🚀 开发
 
-要 Node.js >= 20 才行的喵。
+我这边要 Node.js >= 20 才跑得起来喵。
 
 ```sh
 pnpm install --frozen-lockfile
@@ -106,7 +106,7 @@ pnpm test
 bash scripts/build-android.sh
 ```
 
-这个脚本会做三件事，少做一步就会得到一个「能装但内容是旧的」的包，可别偷懒喵：
+我写的这个脚本会做三件事，少做一步就会得到一个「能装但内容是旧的」的包，可别偷懒喵：
 
 1. `vite build` 生成 `dist`
 2. `cap sync` 把 `dist` 同步进 `android/app/src/main/assets/public`
@@ -122,16 +122,16 @@ PIN=你的锁屏密码 bash scripts/install-apk.sh
 
 ## 🔌 后端说明
 
-这个仓库是纯前端喵，**不含任何服务端代码，也不改后端**。后端沿用原作者的实现，接口约定跟本分支没关系的说：
+这个仓库是纯前端喵，**不含任何服务端代码，我也不改后端**。后端沿用原作者的实现，接口约定跟这个分支没关系的说：
 
 - 后端来源：[MakcRe/KuGouMusicApi](https://github.com/MakcRe/KuGouMusicApi)，就是原项目依赖的那同一套 API
-- 默认地址沿用上游写法 `http://127.0.0.1:6521`，见 [`src/utils/apiBaseUrl.js`](src/utils/apiBaseUrl.js)
-- 构建时可以用环境变量 `VITE_APP_API_URL` 覆盖掉
+- 默认地址我沿用了上游写法 `http://127.0.0.1:6521`，见 [`src/utils/apiBaseUrl.js`](src/utils/apiBaseUrl.js)
+- 构建时你可以用环境变量 `VITE_APP_API_URL` 覆盖掉
 - 应用里「设置 → API 地址」也能随时改成你自己的服务地址喵
 
-本地开发的时候，`pnpm dev` 会用 `kugoumusicapi` 这个 npm 包在 `6521` 端口拉起一个 API 服务（就是 `package.json` 里那个 `api` 脚本）。它只是原项目发布的一个依赖，源码不在本仓库，本喵也没对它动过爪子。
+本地开发的时候，`pnpm dev` 会用 `kugoumusicapi` 这个 npm 包在 `6521` 端口拉起一个 API 服务（就是 `package.json` 里那个 `api` 脚本）。它只是原项目发布的一个依赖，源码不在这个仓库，我也没对它动过爪子。
 
-一句话：**需要后端就按原项目的方式部署喵**，本喵只负责 Android 这一层。
+一句话：**需要后端就按原项目的方式部署喵**，我只负责 Android 这一层。
 
 ## 📂 目录结构
 
@@ -154,7 +154,7 @@ tests/                   单元测试
 
 ## 🙏 致谢与原项目
 
-这个项目绝大部分的工作都来自原项目喵，谢谢原作者 [iAJue](https://github.com/iAJue) 和所有贡献者，本喵只是站在他们肩膀上蹭来蹭去而已：
+这个项目绝大部分的工作都来自原项目喵，谢谢原作者 [iAJue](https://github.com/iAJue) 和所有贡献者，我只是站在他们肩膀上蹭来蹭去而已：
 
 - **原仓库**：https://github.com/MoeKoeMusic/MoeKoeMusic/
 - **原项目主页**：https://Music.MoeKoe.cn
@@ -162,7 +162,7 @@ tests/                   单元测试
 
 原项目的设计灵感来自 [Apple Music](https://music.apple.com)、[YouTube Music](https://music.youtube.com)、[YesPlayMusic](https://github.com/qier222/YesPlayMusic)。
 
-如果你只是想用这个播放器，本喵建议优先用原项目的正式发布版本喵；这个分支主要是给 Android 端的定制需求准备的。
+如果你只是想用这个播放器，我建议优先用原项目的正式发布版本喵；我这个分支主要是给 Android 端的定制需求准备的。
 
 ## ⚠️ 免责声明
 

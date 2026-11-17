@@ -54,7 +54,24 @@ export ANDROID_SDK_ROOT="$SDK"
 echo "JDK: $JAVA_HOME"
 echo "SDK: $ANDROID_HOME"
 
-npx cross-env VITE_APP_ENV=web vite build
+# 安卓包必须内置一个能连上的后端地址。
+# 源码里的默认值是上游写法 127.0.0.1:6521，在手机上指向设备自身，
+# 不注入就会得到一个「界面能开、所有请求都失败」的包。
+# 用法：API_BASE_URL=https://your-api.example.com bash scripts/build-android.sh
+if [ -z "${API_BASE_URL:-}" ]; then
+    cat >&2 <<'WARN'
+警告：没有指定 API_BASE_URL。
+      打出来的包会使用源码默认值 127.0.0.1:6521，在手机上无法连接后端，
+      表现为二维码加载不出来、提示服务器未响应。
+
+      如需可用的安装包，请带上后端地址重新构建：
+        API_BASE_URL=https://your-api.example.com bash scripts/build-android.sh
+WARN
+else
+    echo "API: $API_BASE_URL"
+fi
+
+npx cross-env VITE_APP_ENV=web ${API_BASE_URL:+VITE_APP_API_URL=$API_BASE_URL} vite build
 npx cap sync android
 
 cd android
